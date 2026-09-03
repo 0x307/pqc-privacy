@@ -1,0 +1,134 @@
+[package]
+name        = "pqc-privacy"
+version     = "0.1.0"
+edition     = "2021"
+rust-version = "1.85"
+authors     = ["Kenneth Harper"]
+description = "PQCPrivacy: Quantum-Entangled Privacy Framework with Chaos-Modulated Zero-Knowledge Manifolds and Decentralized Anonymity Meshes for Sovereign Data Systems"
+license     = "MIT OR Apache-2.0"
+repository  = "https://github.com/0x307/pqc-privacy"
+keywords    = ["privacy", "zero-knowledge", "post-quantum", "chaos", "wasm"]
+categories  = ["cryptography", "wasm"]
+
+# lib name kept as `privacy` (not `pqc_privacy`) for import ergonomics: every
+# doctest, README example, and downstream `use privacy::...` stays valid, and
+# `use privacy::chaos::...` reads better than the package-name-derived form.
+# The published package identity (crates.io name, GitHub repo) is `pqc-privacy`;
+# only the Rust-side extern crate name is `privacy`. See 0X3-114.
+[lib]
+name       = "privacy"
+crate-type = ["cdylib", "rlib"]
+
+# ── Core cryptographic primitives ────────────────────────────────────────────
+
+[dependencies]
+# Post-quantum KEM — ML-KEM-768/1024, FIPS 203
+pqc-kem = { version = "0.2", default-features = false }
+
+# Post-quantum signatures — ML-DSA-65, SLH-DSA, FIPS 204/205
+pqc-sig = { version = "0.3", default-features = false }
+
+# KDF — HKDF-SHA256 for QFKH ratchet derivation
+hkdf = { version = "0.12", default-features = false }
+sha2 = { version = "0.10", default-features = false }
+sha3 = { version = "0.10", default-features = false }
+
+# Symmetric encryption — AES-GCM for FHE-layer wrapping, ChaCha for QFKH
+aes-gcm          = { version = "0.10", default-features = false, features = ["aes", "alloc"] }
+chacha20poly1305 = { version = "0.10", default-features = false }
+
+# Encoding
+base64ct = { version = "1", default-features = false, features = ["alloc"] }
+hex      = { version = "0.4", default-features = false, features = ["alloc"] }
+
+# RNG abstraction — caller provides RNG
+rand_core = { version = "0.6", default-features = false }
+
+# RNG for FHE polynomial generation. Deliberately WITHOUT "std"/"std_rng":
+# those exist only to provide `rand::thread_rng()`, which this crate no longer
+# uses — key generation takes a caller-supplied RNG instead, which is what keeps
+# the no_std build honest and matches the convention in pqc-kem/pqc-sig/aethel-core.
+rand = { version = "0.8", default-features = false, features = ["getrandom"] }
+
+# BLAKE3 — integrity hashing for FHE ciphertexts
+blake3 = { version = "1.5", default-features = false }
+
+# Serialization — no_std with alloc
+serde      = { version = "1", default-features = false, features = ["derive", "alloc"] }
+serde_json = { version = "1", default-features = false, features = ["alloc"] }
+
+# Error handling
+thiserror = { version = "2", default-features = false }
+
+# Zeroize secret material on drop
+zeroize = { version = "1", default-features = false, features = ["derive"] }
+
+# Constant-time comparison
+subtle = { version = "2", default-features = false }
+
+# DEFLATE (RFC 1951) — the compression algorithm for both the Privacy Icosuple
+# Serialization format (version 1) and `compression::compress_bytes`.
+# Deliberately not zstd: the `zstd` crate requires std, which would cost this crate its
+# no_std/WASM build, and the payloads here (proof bundles, chaos states, ≤8 KiB frames)
+# are small and high-entropy enough that zstd would not pay for itself.
+miniz_oxide = { version = "0.9", default-features = false, features = ["with-alloc"] }
+
+# Reed-Solomon erasure coding for k-of-n vault sharding
+reed-solomon-erasure = { version = "6", default-features = false, features = ["std"] }
+
+# Optional: WASM bindings
+wasm-bindgen = { version = "0.2", optional = true }
+js-sys       = { version = "0.3", optional = true }
+
+# Optional: WASM entropy (v0.2 for rand_core/getrandom compat)
+getrandom = { version = "0.2", optional = true }
+
+# Optional: WASM entropy v0.4 (for crypto-common / ml-kem transitive dep)
+getrandom04 = { package = "getrandom", version = "0.4", optional = true }
+
+# Optional: instant with wasm-bindgen feature (for parking_lot on WASM)
+instant = { version = "0.1", optional = true }
+
+[features]
+default = ["std"]
+
+# std: enables std-dependent trait impls
+std = [
+    "sha2/std",
+    "sha3/std",
+    "hkdf/std",
+    "serde/std",
+    "serde_json/std",
+    "zeroize/std",
+    "pqc-kem/std",
+    "pqc-sig/std",
+]
+
+# wasm: enables wasm32-unknown-unknown target + JS entropy
+wasm = [
+    "dep:wasm-bindgen",
+    "dep:js-sys",
+    "dep:getrandom",
+    "getrandom/js",
+    "rand_core/getrandom",
+    "dep:getrandom04",
+    "getrandom04/wasm_js",
+    "dep:instant",
+    "instant/wasm-bindgen",
+]
+
+# genomic: QTAID nano-tokenization + biometric login. Off by default — see
+# src/genomic/mod.rs: this is ASCII-character hashing and string-diff matching,
+# not real genomic-sequence or biometric processing, and publishing a working
+# claim about genomic biometrics by default carries regulatory weight the rest
+# of the crate doesn't. Decided 0X3-118, mirrors aethel-core's `puf` gate.
+genomic = []
+
+# enclave: WAVEN local page access-control simulation. Off by default — see
+# src/enclave/mod.rs: no real hardware memory-protection-key integration or VM
+# isolation underneath it, the same reason aethel-core gates its own `enclave`
+# feature. Decided 0X3-118.
+enclave = []
+
+[dev-dependencies]
+rand = "0.8"

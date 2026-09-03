@@ -1,0 +1,137 @@
+name: CI
+
+# Clean-room build verification, mirroring the pqc-kem/pqc-sig pattern (0X3-119).
+# Every push gets a genuinely fresh GitHub-hosted runner (fresh checkout, fresh toolchain
+# install, no local state carried over from any prior run) instead of a trust-me claim. No
+# dependency or build caching is used here on purpose -- adding it back would quietly
+# reintroduce the "stale local state" problem this workflow exists to rule out.
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  # Default-feature build and test. This is the crate's real, supported surface and must
+  # always pass cleanly on a from-scratch checkout.
+  default-build-test:
+    name: Default features (build + test)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout (fresh clone, no cache)
+        uses: actions/checkout@v4
+
+      - name: Install Rust toolchain (fresh, no cache)
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: cargo build (default features)
+        run: cargo build --locked --verbose
+
+      - name: cargo test (default features)
+        run: cargo test --locked --verbose
+
+  # Builds against the exact MSRV declared in Cargo.toml's `rust-version`. Determined
+  # empirically (0X3-119), not guessed: this crate depends on pqc-kem/pqc-sig, both of which
+  # already declare `rust-version = "1.85"` themselves, so 1.85 is a floor this crate can't
+  # go below regardless of its own code. Verified to build clean at 1.85.0 locally before
+  # setting the field. This job pins the toolchain to exactly that version -- not `stable` --
+  # so it goes red the moment a future change relies on anything newer than the declared MSRV.
+  msrv-build-test:
+    name: MSRV (Rust 1.85.0, build + test)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout (fresh clone, no cache)
+        uses: actions/checkout@v4
+
+      - name: Install Rust 1.85.0 (exact MSRV toolchain, fresh, no cache)
+        uses: dtolnay/rust-toolchain@1.85.0
+
+      - name: cargo build (default features, MSRV toolchain)
+        run: cargo build --locked --verbose
+
+      - name: cargo test (default features, MSRV toolchain)
+        run: cargo test --locked --verbose
+
+  # Unlike pqc-kem's hqc/bike/mceliece (deliberately gated behind compile_error! stubs),
+  # every optional feature in this crate (genomic, enclave, wasm) actually compiles --
+  # `genomic`/`enclave` are scope decisions (0X3-118), not unfinished code. So, unlike
+  # pqc-kem's CI, --all-features is expected to PASS here.
+  all-features-build-test:
+    name: --all-features (build + test)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout (fresh clone, no cache)
+        uses: actions/checkout@v4
+
+      - name: Install Rust toolchain (fresh, no cache)
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: cargo build --all-features
+        run: cargo build --all-features --locked --verbose
+
+      - name: cargo test --all-features
+        run: cargo test --all-features --locked --verbose
+
+  # The documented WASM build target (README "Building" section): default features (std)
+  # plus wasm, targeting wasm32-unknown-unknown. NOTE: this is deliberately NOT the same
+  # invocation as build-wasm.ps1's wasm-pack step (`--no-default-features --features wasm`)
+  # -- that combination currently fails to compile for this target (duplicate `panic_impl`
+  # lang item between this crate and the `pqc-kem` dependency's own no_std panic handler,
+  # discovered 0X3-119). Tracked as a follow-up; this job checks the combination that
+  # actually builds and is what the README tells a consumer to run.
+  wasm-build:
+    name: WASM target (std + wasm features)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout (fresh clone, no cache)
+        uses: actions/checkout@v4
+
+      - name: Install Rust toolchain (fresh, no cache)
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: wasm32-unknown-unknown
+
+      - name: cargo build --target wasm32-unknown-unknown --features wasm
+        run: cargo build --target wasm32-unknown-unknown --features wasm --locked --verbose
+
+  # Builds and tests the actual PACKAGED artifact (what `cargo add` / crates.io consumers
+  # get), not the working tree. `cargo package` re-verifies by extracting the package into
+  # target/package/<name>-<ver>/ and building there; we then run tests from that same
+  # extracted directory so both build and test exercise what .gitignore/exclude rules
+  # actually ship, not the live source tree.
+  packaged-artifact:
+    name: Packaged artifact (cargo package build + test)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout (fresh clone, no cache)
+        uses: actions/checkout@v4
+
+      - name: Install Rust toolchain (fresh, no cache)
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: cargo package --list (inspect what ships)
+        run: cargo package --list --locked
+
+      - name: cargo package (build + verify the packaged artifact)
+        run: cargo package --locked
+
+      - name: Locate extracted package directory
+        id: pkg
+        run: |
+          PKG_DIR=$(find target/package -maxdepth 1 -type d -name 'pqc-privacy-*' | head -n1)
+          if [ -z "$PKG_DIR" ]; then
+            echo "::error::Could not find extracted package directory under target/package/"
+            exit 1
+          fi
+          echo "dir=$PKG_DIR" >> "$GITHUB_OUTPUT"
+
+      - name: cargo test against the packaged artifact
+        working-directory: ${{ steps.pkg.outputs.dir }}
+        run: cargo test --locked --verbose

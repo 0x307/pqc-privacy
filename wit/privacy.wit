@@ -1,0 +1,778 @@
+// privacy/wit/privacy.wit
+//
+// WIT interface for the PQCPrivacy WASM Component Model component.
+// Package: sagp:privacy@0.1.0
+//
+// ⚠️  NOTE: The compiled output is produced by `wasm-pack` with `wasm-bindgen`,
+//    which generates a flat JS module — NOT a WASM Component Model component.
+//    This file documents the flat wasm-bindgen API surface in WIT-style pseudocode.
+//
+// Build with:
+//   wasm-pack build --target web --features wasm
+//
+// SOURCE OF TRUTH: src/wasm.rs
+//
+// Author: Kenneth Harper
+
+package sagp:privacy@0.1.0;
+
+// =============================================================================
+// WORLD
+// =============================================================================
+
+world privacy {
+    export chaos-oracle;
+    export privacy-hypergraph;
+    export zk-proof-engine;
+    export dp-engine;
+    export tuple-chain;
+    export qfkh-ratchet;
+    export sphinx-mixnet;
+    export sanctuary-vault;
+    export sovereign-messenger;
+    export genomic-engine;
+    export privacy-serializer;
+    export chronosync;
+}
+
+// =============================================================================
+// INTERFACE: chaos-oracle
+// =============================================================================
+//
+// Chaos Randomness Oracle for Privacy Amplification (CRO-PA)
+//
+// Dual-attractor oracle (Chua primary + Rössler backup) that generates
+// adaptive randomness for ZK challenges, DP noise, and key derivation.
+// Achieves Lyapunov ≥ 4.5 and H_min > 0.99 bits/bit.
+//
+// WASM API (flat functions, no resource):
+//
+// chaos_sample: func(n: u32) -> result<Uint8Array, JsValue>
+//   Sample n bytes of chaos-derived randomness (SHAKE-256 whitened).
+//   Fails if both Chua and Rössler attractors stall.
+//
+// chaos_perturbation: func() -> f64
+//   Get current perturbation value in (-1, 1) from active attractor.
+//
+// chaos_fiat_shamir_seed: func() -> result<Uint8Array, JsValue>
+//   Get 32-byte Fiat-Shamir challenge seed: SHA-256(SHAKE-256(chaos_bits)).
+//
+// chaos_hash_5dqeh: func(input: Uint8Array) -> string
+//   Compute 5D quantum-enhanced hash: SHA-256(SHAKE-256(input) || "5dqeh-v1").
+//   Returns 64-char hex string.
+//
+// chaos_lyapunov: func() -> f64
+//   Get current Lyapunov exponent of the active attractor (≥ 4.5 when healthy).
+//
+// chaos_telemetry_json: func() -> string
+//   Get telemetry as JSON: {"lyapunov": f64, "h_min": f64, "passed": bool, "attractor": string}
+//
+// chaos_entropy_frame: func(size: u32) -> result<string, JsValue>
+//   Generate entropy frame as JSON: {"bytes_hex": string, "hash_5dqeh": string, "h_min": f64}
+
+interface chaos-oracle {
+    // chaos_sample(n) -> Uint8Array | Error
+    // chaos_perturbation() -> f64
+    // chaos_fiat_shamir_seed() -> Uint8Array | Error
+    // chaos_hash_5dqeh(input: Uint8Array) -> string
+    // chaos_lyapunov() -> f64
+    // chaos_telemetry_json() -> string
+    // chaos_entropy_frame(size: u32) -> string | Error
+    //
+    // ── GAP-P-01: chaos_entropy_bytes ────────────────────────────────────────
+    //
+    // chaos_entropy_bytes_wasm: func(n: u32) -> result<Uint8Array, JsValue>
+    //   Generate n bytes of chaos-derived entropy as raw bytes.
+    //   Uses the dual-attractor oracle (Chua primary, Rössler fallback).
+    //   Output is SHAKE-256 whitened. Passes NIST SP 800-90B H_min > 0.99.
+    //   Fails if both Chua and Rössler attractors stall.
+    //
+    // ── GAP-P-02: chaos_seed_u64 ─────────────────────────────────────────────
+    //
+    // chaos_seed_u64_wasm: func() -> result<u32, JsValue>
+    //   Generate a single u64 from the chaos oracle; returns lower 32 bits for
+    //   JavaScript compatibility. Takes 8 bytes from chaos_entropy_bytes and
+    //   interprets as little-endian u64. Suitable for LCG-based Fisher-Yates
+    //   shuffles in sharding.
+}
+
+// =============================================================================
+// INTERFACE: privacy-hypergraph
+// =============================================================================
+//
+// Five-Dimensional Entangled Zero-Knowledge Privacy Hypergraph (5D-EZPH)
+//
+// Vertices are 5-qubit tensor product states; hyperedges are Bell-state channels
+// modulated by Kaluza-Klein manifolds and Chua chaos attractors.
+// Achieves CHSH > 2.8 for non-local ZK soundness.
+//
+// WASM API:
+//
+// hypergraph_new: func(chaos_seed: f64) -> u32
+//   Create a new hypergraph with genesis vertex. Returns opaque handle (index).
+//   The handle is used in all subsequent calls.
+//
+// hypergraph_encode_vertex: func(
+//     handle: u32, id: string,
+//     spatial: f64, temporal: f64, dp_epsilon: f64,
+//     phase_angle: f64, chaos_traj: f64, expiry_ms: u64
+// ) -> result<string, JsValue>
+//   Encode an event as a 5D hypergraph vertex. Returns vertex ID.
+//
+// hypergraph_form_edge: func(
+//     handle: u32, id: string,
+//     vertex_ids_json: string,   // JSON array of vertex ID strings
+//     chaos_perturbation: f64
+// ) -> result<string, JsValue>
+//   Form a hyperedge between ≥2 vertices with Kaluza-Klein modulation.
+//   Returns edge ID.
+//
+// hypergraph_traverse: func(
+//     handle: u32, start: string, max_hops: u32
+// ) -> result<string, JsValue>
+//   Traverse with non-local jumps (CHSH > 2.8 edges only).
+//   Returns JSON array of vertex IDs.
+//
+// hypergraph_vertex_count: func(handle: u32) -> u32
+//   Returns number of vertices in the hypergraph.
+//
+// hypergraph_prove_non_locality: func(handle: u32) -> result<string, JsValue>
+//   Generate ZK proof of non-locality. Returns JSON PrivacyProof.
+
+interface privacy-hypergraph {
+    // hypergraph_new(chaos_seed: f64) -> u32
+    // hypergraph_encode_vertex(handle, id, spatial, temporal, dp_epsilon, phase_angle, chaos_traj, expiry_ms) -> string | Error
+    // hypergraph_form_edge(handle, id, vertex_ids_json, chaos_perturbation) -> string | Error
+    // hypergraph_traverse(handle, start, max_hops) -> string | Error
+    // hypergraph_vertex_count(handle) -> u32
+    // hypergraph_prove_non_locality(handle) -> string | Error
+    //
+    // ── GAP-P-03: hypergraph_chsh_value ──────────────────────────────────────
+    //
+    // hypergraph_chsh_value_wasm: func(graph_json: string) -> f64
+    //   Compute the CHSH S-value for the current hypergraph state.
+    //   S = |E(A,B) + E(A,B') + E(A',B) - E(A',B')| where correlators are
+    //   derived from edge kk_metric values.
+    //   Returns the S value (should be > 2.8 for valid quantum non-locality).
+    //   Returns 0.0 on parse error.
+}
+
+// =============================================================================
+// INTERFACE: zk-proof-engine
+// =============================================================================
+//
+// Hybrid ZK Layer + Entanglement Engine
+//
+// Context-aware SNARK/STARK selection, recursive aggregation (Halo2 folding),
+// and Bell-state entanglement for non-local soundness.
+//
+// WASM API:
+//
+// zk_prove_snark: func(
+//     statement_hash: Uint8Array,   // 32 bytes
+//     witness_hash: Uint8Array,     // 32 bytes
+//     chaos_seed: Uint8Array        // 32 bytes
+// ) -> result<string, JsValue>
+//   Generate a Sigma-protocol SNARK proof. Returns JSON PrivacyProof.
+//
+// zk_verify_snark: func(
+//     proof_json: string,
+//     statement_hash: Uint8Array    // 32 bytes
+// ) -> bool
+//   Verify a SNARK proof. Returns true if valid.
+//
+// zk_prove_stark: func(
+//     statement: Uint8Array,        // 32 bytes
+//     witness: Uint8Array,          // 32 bytes
+//     chaos_seed: Uint8Array        // 32 bytes
+// ) -> result<string, JsValue>
+//   Generate a FRI-style STARK proof. Returns JSON PrivacyProof.
+//
+// zk_verify_stark: func(
+//     proof_json: string,
+//     statement: Uint8Array         // 32 bytes
+// ) -> bool
+//   Verify a STARK proof. Returns true if valid.
+//
+// zk_prove_hybrid: func(
+//     statement_hash: Uint8Array,   // 32 bytes
+//     witness_hash: Uint8Array,     // 32 bytes
+//     chaos_seed: Uint8Array,       // 32 bytes
+//     context: u8                   // 0=LowBandwidth, 1=HighTransparency, 2=Hybrid
+// ) -> result<string, JsValue>
+//   Generate a hybrid SNARK+STARK proof. Returns JSON PrivacyProof.
+//
+// zk_aggregate: func(
+//     proof_jsons: string,          // JSON array of proof JSON strings
+//     stake_weights: string,        // JSON array of u64 stake weights
+//     chaos_seed: Uint8Array        // 32 bytes
+// ) -> result<string, JsValue>
+//   Aggregate multiple proofs recursively (Halo2 folding). Returns JSON PrivacyProof.
+//
+// zk_entangle_pair: func(
+//     proof_a_json: string,
+//     proof_b_json: string,
+//     chaos_phase: f64
+// ) -> result<string, JsValue>
+//   Entangle two proofs (Bell-state analog). Returns JSON PrivacyProof.
+
+interface zk-proof-engine {
+    // zk_prove_snark(statement_hash, witness_hash, chaos_seed) -> string | Error
+    // zk_verify_snark(proof_json, statement_hash) -> bool
+    // zk_prove_stark(statement, witness, chaos_seed) -> string | Error
+    // zk_verify_stark(proof_json, statement) -> bool
+    // zk_prove_hybrid(statement_hash, witness_hash, chaos_seed, context) -> string | Error
+    // zk_aggregate(proof_jsons, stake_weights, chaos_seed) -> string | Error
+    // zk_entangle_pair(proof_a_json, proof_b_json, chaos_phase) -> string | Error
+    //
+    // ── GAP-P-04: zk_prove_manifold_path ─────────────────────────────────────
+    //
+    // zk_prove_manifold_path_wasm: func(
+    //     statement_hash: Uint8Array,   // BLAKE3 hash of path start/end coordinates
+    //     path_witness: Uint8Array,     // serialized sequence of 5D coordinates
+    //     chaos_seed: Uint8Array        // entropy from chaos oracle
+    // ) -> result<string, JsValue>
+    //   Generate a ZK proof that a manifold path is a valid geodesic.
+    //   Used for DDOP UVI receipts. Returns JSON-serialized PrivacyProof using
+    //   the Hybrid scheme (SNARK + STARK combined commitment).
+}
+
+// =============================================================================
+// INTERFACE: dp-engine
+// =============================================================================
+//
+// Differential Privacy Engine with Rényi Bounds (DPE-RB)
+//
+// Tracks privacy budgets using Rényi divergence, injects Gaussian/Laplace
+// noise from chaos oracles, and composes for queries with ε ≤ 10⁻⁶.
+//
+// WASM API:
+//
+// dp_apply: func(
+//     query_id: string,
+//     sensitivity: f64,
+//     epsilon: f64,
+//     delta: f64,
+//     chaos_perturbation: f64
+// ) -> result<string, JsValue>
+//   Apply DP to a query. Returns JSON DpNoiseFrame:
+//   {"renyi_alpha": u32, "bound": f64, "epsilon": f64, "noise_scale": f64}
+//
+// dp_noise_sample: func(
+//     noise_scale: f64,
+//     chaos_seed: Uint8Array    // 32 bytes
+// ) -> f64
+//   Generate a noise sample from the configured distribution (Gaussian/Laplace).
+//
+// dp_check_budget: func() -> result<bool, JsValue>
+//   Check if privacy budget is within limits. Returns true if OK.
+//
+// dp_epsilon_consumed: func() -> f64
+//   Returns total epsilon consumed so far.
+//
+// dp_prove_compliance: func() -> string
+//   Generate ZK proof of DP compliance. Returns JSON PrivacyProof.
+//
+// dp_reset_budget: func()
+//   Reset the privacy budget (governance-approved).
+
+interface dp-engine {
+    // dp_apply(query_id, sensitivity, epsilon, delta, chaos_perturbation) -> string | Error
+    // dp_noise_sample(noise_scale, chaos_seed) -> f64
+    // dp_check_budget() -> bool | Error
+    // dp_epsilon_consumed() -> f64
+    // dp_prove_compliance() -> string
+    // dp_reset_budget()
+}
+
+// =============================================================================
+// INTERFACE: tuple-chain
+// =============================================================================
+//
+// TupleChain Semantic Ledger with Expiry-Bound Tuples (TCSL-EBT)
+//
+// Five-tuple semantic ledger: (subject, predicate, object, proof, expiry).
+// Supports homomorphic operations, DP-noised expiry, and Wyqcc L1 anchoring.
+//
+// WASM API:
+//
+// tuple_insert: func(
+//     subject: string,
+//     predicate: string,
+//     object: Uint8Array,
+//     expiry_ms: u64,
+//     chaos_seed: Uint8Array    // 32 bytes
+// ) -> result<string, JsValue>
+//   Insert a five-tuple. Returns tuple ID (16-char hex).
+//
+// tuple_query: func(
+//     subject: string,
+//     predicate: string,
+//     now_ms: u64
+// ) -> result<string, JsValue>
+//   Query tuples by subject. Returns JSON array of PrivacyTuple objects.
+//
+// tuple_prune_expired: func(now_ms: u64) -> u32
+//   Prune expired tuples. Returns count pruned.
+//
+// tuple_anchor_all: func() -> string
+//   Anchor all un-anchored tuples to Wyqcc L1. Returns Merkle root hex.
+//
+// tuple_active_count: func(now_ms: u64) -> u32
+//   Returns count of active (non-expired) tuples.
+
+interface tuple-chain {
+    // tuple_insert(subject, predicate, object, expiry_ms, chaos_seed) -> string | Error
+    // tuple_query(subject, predicate, now_ms) -> string | Error
+    // tuple_prune_expired(now_ms) -> u32
+    // tuple_anchor_all() -> string
+    // tuple_active_count(now_ms) -> u32
+}
+
+// =============================================================================
+// INTERFACE: qfkh-ratchet
+// =============================================================================
+//
+// Quantum Fast Key Hopping (QFKH) Protocol
+//
+// Rapid key rotation expiring ML-KEM-768 keys every ≤1 ms using chaos-seeded
+// ratchets. Achieves post-quantum forward secrecy.
+//
+// WASM API:
+//
+// qfkh_initiate: func(
+//     chaos_seed: Uint8Array    // 32 bytes
+// ) -> result<string, JsValue>
+//   Initiator: generate ML-KEM-768 keypair.
+//   Returns JSON: {"dk_bytes_hex": string, "ek_bytes_hex": string}
+//   dk = decapsulation key (64 bytes), ek = encapsulation key (1184 bytes)
+//
+// qfkh_respond: func(
+//     ek_bytes_hex: string,
+//     chaos_seed: Uint8Array,   // 32 bytes
+//     now_ms: u64
+// ) -> result<string, JsValue>
+//   Responder: encapsulate to initiator's encapsulation key.
+//   Returns JSON: {"ciphertext_hex": string, "ratchet_state_hex": string}
+//
+// qfkh_complete: func(
+//     dk_bytes_hex: string,
+//     ciphertext_hex: string,
+//     chaos_seed: Uint8Array,   // 32 bytes
+//     now_ms: u64
+// ) -> result<string, JsValue>
+//   Initiator: complete key establishment by decapsulating.
+//   Returns JSON: {"ratchet_state_hex": string}
+//
+// qfkh_encrypt: func(
+//     ratchet_state_hex: string,
+//     plaintext: Uint8Array,
+//     chaos_seed: Uint8Array,   // 32 bytes
+//     now_ms: u64
+// ) -> result<Uint8Array, JsValue>
+//   Encrypt payload with current message key (AES-GCM-256).
+//   Returns nonce (12) || ciphertext || tag (16).
+//
+// qfkh_decrypt: func(
+//     ratchet_state_hex: string,
+//     ciphertext: Uint8Array,
+//     chaos_seed: Uint8Array,   // 32 bytes
+//     now_ms: u64
+// ) -> result<Uint8Array, JsValue>
+//   Decrypt payload. Returns plaintext.
+
+interface qfkh-ratchet {
+    // qfkh_initiate(chaos_seed) -> string | Error
+    // qfkh_respond(ek_bytes_hex, chaos_seed, now_ms) -> string | Error
+    // qfkh_complete(dk_bytes_hex, ciphertext_hex, chaos_seed, now_ms) -> string | Error
+    // qfkh_encrypt(ratchet_state_hex, plaintext, chaos_seed, now_ms) -> Uint8Array | Error
+    // qfkh_decrypt(ratchet_state_hex, ciphertext, chaos_seed, now_ms) -> Uint8Array | Error
+}
+
+// =============================================================================
+// INTERFACE: sphinx-mixnet
+// =============================================================================
+//
+// Mixnet/Tor with Sphinx Packets
+//
+// Layered Sphinx packet construction for anonymous routing through the DW3B mesh.
+// Poisson decoy traffic for timing analysis resistance.
+//
+// WASM API:
+//
+// sphinx_build_packet: func(
+//     hops: string,             // JSON array of hop node IDs
+//     hop_keys_hex: string,     // JSON array of hex-encoded ML-KEM-768 encapsulation keys
+//     payload: Uint8Array,
+//     chaos_seed: Uint8Array    // 32 bytes
+// ) -> result<string, JsValue>
+//   Build a layered Sphinx packet. Returns JSON SphinxPacket.
+//
+// sphinx_unwrap_layer: func(
+//     packet_json: string,
+//     node_id: string
+// ) -> result<string, JsValue>
+//   Unwrap one layer of a Sphinx packet at a mix node.
+//   Returns JSON with remaining packet or final payload.
+//
+// sphinx_generate_decoys: func(
+//     lambda: f64,
+//     chaos_seed: Uint8Array,   // 32 bytes
+//     hop_count: u32
+// ) -> u32
+//   Generate Poisson decoy count for timing analysis resistance.
+//   Returns number of decoy packets to inject.
+
+interface sphinx-mixnet {
+    // sphinx_build_packet(hops_json, hop_keys_hex_json, payload, chaos_seed) -> string | Error
+    // sphinx_unwrap_layer(packet_json, node_id) -> string | Error
+    // sphinx_generate_decoys(lambda, chaos_seed, hop_count) -> u32
+    //
+    // ── GAP-P-05: sphinx_route_obfuscated ────────────────────────────────────
+    //
+    // sphinx_route_obfuscated_wasm: func(
+    //     hops_json: string,            // JSON array of node ID strings
+    //     hop_keys_hex_json: string,    // JSON array of hex-encoded ML-KEM-768 public keys
+    //     payload: Uint8Array,          // the actual data to route
+    //     qem_metadata_json: string,    // JSON string of QEM metadata to embed
+    //     chaos_seed: Uint8Array        // entropy from chaos oracle
+    // ) -> result<string, JsValue>
+    //   Build a Sphinx packet with obfuscation metadata embedded in the payload header.
+    //   The QEM metadata is prepended as a length-prefixed header before onion encryption.
+    //   Header format: [4 bytes magic "QEMH"] [4 bytes qem_len LE] [qem_bytes]
+    //                  [4 bytes seed_len LE] [seed_bytes] [original payload]
+    //   Returns JSON-serialized SphinxPacket on success.
+}
+
+// =============================================================================
+// INTERFACE: sanctuary-vault
+// =============================================================================
+//
+// Sanctuary Vault Ransomware-Proof Storage System (SV-RPSS)
+//
+// FHE-encrypted file storage sharded into expiry-bound tuples.
+// AES-GCM-256 + Reed-Solomon k-of-n erasure coding.
+//
+// WASM API:
+//
+// vault_store: func(
+//     file_id: string,
+//     owner_did: string,
+//     plaintext: Uint8Array,
+//     chaos_seed: Uint8Array,   // 32 bytes
+//     expiry_ms: u64,
+//     k: u32,                   // data shards (default 10)
+//     n: u32                    // total shards (default 15)
+// ) -> result<string, JsValue>
+//   Store a file with AES-GCM-256 + Reed-Solomon sharding.
+//   Returns JSON shard manifest: {"file_id": string, "tuple_ids": [string], "shard_count": u32}
+//
+// vault_access: func(
+//     file_id: string,
+//     owner_did: string,
+//     chaos_seed: Uint8Array,   // 32 bytes
+//     now_ms: u64
+// ) -> result<Uint8Array, JsValue>
+//   Access a file via ZK ownership proof. Returns decrypted plaintext.
+//
+// vault_file_count: func() -> u32
+//   Returns number of stored files.
+
+interface sanctuary-vault {
+    // vault_store(file_id, owner_did, plaintext, chaos_seed, expiry_ms, k, n) -> string | Error
+    // vault_access(file_id, owner_did, chaos_seed, now_ms) -> Uint8Array | Error
+    // vault_file_count() -> u32
+}
+
+// =============================================================================
+// INTERFACE: sovereign-messenger
+// =============================================================================
+//
+// Sovereign Messenger with P2P Direct Mode (SM-P2PDM)
+//
+// P2P direct mode for 1:1 chats with QFKH encryption, hybrid relay for groups.
+// Metadata obliteration via DW3B with Poisson decoys.
+//
+// WASM API:
+//
+// messenger_send_dm: func(
+//     sender_id: string,
+//     recipient_id: string,
+//     message: Uint8Array,
+//     chaos_seed: Uint8Array,   // 32 bytes
+//     timestamp_ms: u64
+// ) -> result<Uint8Array, JsValue>
+//   Send a P2P direct message (AES-GCM-256 encrypted).
+//   Returns encrypted message bytes: nonce (12) || ciphertext || tag (16).
+//
+// messenger_receive_dm: func(
+//     sender_id: string,
+//     recipient_id: string,
+//     ciphertext: Uint8Array,
+//     chaos_seed: Uint8Array,   // 32 bytes
+//     timestamp_ms: u64
+// ) -> result<Uint8Array, JsValue>
+//   Receive and decrypt a P2P direct message. Returns plaintext.
+//
+// messenger_send_group: func(
+//     group_id: string,
+//     sender_id: string,
+//     message: Uint8Array,
+//     chaos_seed: Uint8Array,   // 32 bytes
+//     timestamp_ms: u64
+// ) -> result<Uint8Array, JsValue>
+//   Send a group message (hybrid relay mode, AES-GCM-256).
+//   Returns encrypted message bytes.
+//
+// messenger_receive_group: func(
+//     group_id: string,
+//     ciphertext: Uint8Array,
+//     chaos_seed: Uint8Array,   // 32 bytes
+//     timestamp_ms: u64
+// ) -> result<Uint8Array, JsValue>
+//   Receive and decrypt a group message. Returns plaintext.
+
+interface sovereign-messenger {
+    // messenger_send_dm(sender_id, recipient_id, message, chaos_seed, timestamp_ms) -> Uint8Array | Error
+    // messenger_receive_dm(sender_id, recipient_id, ciphertext, chaos_seed, timestamp_ms) -> Uint8Array | Error
+    // messenger_send_group(group_id, sender_id, message, chaos_seed, timestamp_ms) -> Uint8Array | Error
+    // messenger_receive_group(group_id, ciphertext, chaos_seed, timestamp_ms) -> Uint8Array | Error
+}
+
+// =============================================================================
+// INTERFACE: genomic-engine
+// =============================================================================
+//
+// Requires the non-default `genomic` Cargo feature — not compiled into the default
+// `wasm` build. ASCII-character hashing and string-diff matching, not real genomic or
+// biometric processing; see src/genomic/mod.rs and the crate README.
+//
+// Nano-tokenizes genomic alleles into 2–4 bit ZK commitments, minted as
+// expiry-bound tuples on Wyqcc L1 for sovereign biometric IDs.
+//
+// WASM API:
+//
+// genomic_tokenize: func(
+//     sequence: string,         // DNA sequence (A/C/G/T characters)
+//     patient_id: string,
+//     dp_epsilon: f64,
+//     chaos_seed: Uint8Array,   // 32 bytes
+//     expiry_ms: u64
+// ) -> result<string, JsValue>
+//   Nano-tokenize a DNA sequence. Returns JSON array of GenomicToken objects:
+//   [{"commitment": string, "tuple_id": string, "dp_epsilon": f64}, ...]
+//
+// genomic_prove_trait: func(
+//     allele_bits: u8,
+//     blinding_factor_hex: string,
+//     chaos_seed: Uint8Array    // 32 bytes
+// ) -> result<string, JsValue>
+//   Prove a genomic trait (allele knowledge) via Sigma-protocol SNARK.
+//   Returns JSON PrivacyProof.
+//
+// genomic_register: func(
+//     did: string,
+//     sequence: string,
+//     dp_epsilon: f64,
+//     chaos_seed: Uint8Array,   // 32 bytes
+//     expiry_ms: u64
+// ) -> result<bool, JsValue>
+//   Register a genomic template for a DID. Returns true on success.
+//
+// genomic_authenticate: func(
+//     did: string,
+//     challenge_sequence: string,
+//     chaos_seed: Uint8Array,   // 32 bytes
+//     now_ms: u64,
+//     session_expiry_ms: u64
+// ) -> result<string, JsValue>
+//   Authenticate via ZK SNP matching (≥98/100 threshold).
+//   Returns JSON BiometricSession: {"session_id": string, "wyqcc_did": string, ...}
+//
+// genomic_revoke: func(did: string) -> result<bool, JsValue>
+//   Revoke a DID's genomic template. Returns true on success.
+
+interface genomic-engine {
+    // genomic_tokenize(sequence, patient_id, dp_epsilon, chaos_seed, expiry_ms) -> string | Error
+    // genomic_prove_trait(allele_bits, blinding_factor_hex, chaos_seed) -> string | Error
+    // genomic_register(did, sequence, dp_epsilon, chaos_seed, expiry_ms) -> bool | Error
+    // genomic_authenticate(did, challenge_sequence, chaos_seed, now_ms, session_expiry_ms) -> string | Error
+    // genomic_revoke(did) -> bool | Error
+}
+
+// =============================================================================
+// INTERFACE: privacy-serializer
+// =============================================================================
+//
+// Privacy Icosuple Serialization Format (PI-SF)
+//
+// 8192-byte fixed-format serialization embedding 5D manifolds, ZK proofs,
+// and chaos states. ML-DSA-65 signatures for icosuple integrity.
+//
+// WASM API:
+//
+// serial_build_icosuple: func(
+//     manifold_tensor: Uint8Array,
+//     proof_bundle: Uint8Array,
+//     chaos_state: Uint8Array,
+//     chaos_seed: Uint8Array,   // 32 bytes (used as ML-DSA-65 signing seed)
+//     compress: bool
+// ) -> result<Uint8Array, JsValue>
+//   Build and serialize a privacy icosuple (≤8192 bytes).
+//   Signed with ML-DSA-65 using chaos_seed as the signing key seed.
+//
+// serial_deserialize: func(
+//     frame: Uint8Array
+// ) -> result<string, JsValue>
+//   Deserialize a privacy icosuple frame.
+//   Returns JSON: {"manifold_tensor_hex": string, "proof_bundle_hex": string,
+//                  "chaos_state_hex": string, "compressed": bool, "signature_hex": string}
+//
+// serial_verify_icosuple: func(
+//     manifold_tensor: Uint8Array,
+//     proof_bundle: Uint8Array,
+//     chaos_state: Uint8Array,
+//     chaos_seed: Uint8Array    // 32 bytes (ML-DSA-65 signing seed)
+// ) -> bool
+//   Verify the ML-DSA-65 signature on an icosuple frame. Returns true if valid.
+//
+// serial_build_icosuple_frame_json: func(
+//     manifold_tensor: Uint8Array,
+//     proof_bundle: Uint8Array,
+//     chaos_state: Uint8Array,
+//     chaos_seed: Uint8Array,   // 32 bytes
+//     compress: bool
+// ) -> result<string, JsValue>
+//   Build an icosuple frame with full ML-DSA-65 signature and public key.
+//   Returns JSON IcosupleFrame with signature_hex and signing_key_public_hex.
+
+interface privacy-serializer {
+    // serial_build_icosuple(manifold_tensor, proof_bundle, chaos_state, chaos_seed, compress) -> Uint8Array | Error
+    // serial_deserialize(frame) -> string | Error
+    // serial_verify_icosuple(manifold_tensor, proof_bundle, chaos_state, chaos_seed) -> bool
+    // serial_build_icosuple_frame_json(manifold_tensor, proof_bundle, chaos_state, chaos_seed, compress) -> string | Error
+    //
+    // ── GAP-P-06: serial_build_obfuscation_frame ─────────────────────────────
+    //
+    // serial_build_obfuscation_frame_wasm: func(
+    //     manifold_tensor: string,      // serialized 5D metric tensor (JSON)
+    //     qem_json: string,             // QEM metadata JSON
+    //     proof_bundle: string,         // serialized ZK proof bundle (JSON)
+    //     chaos_state: Uint8Array,      // current chaos oracle state bytes
+    //     chaos_seed: Uint8Array,       // entropy seed (any length; SHA-256 hashed to 32 bytes)
+    //     compress: bool                // whether to apply IFS compression
+    // ) -> result<Uint8Array, JsValue>
+    //   Build a privacy icosuple frame containing obfuscation state.
+    //   Serializes the full obfuscation state (manifold + QEM + routing) into the
+    //   privacy icosuple format for transmission. Returns serialized icosuple bytes
+    //   (≤ 8192 bytes). The manifold_tensor field carries the QEM JSON as a
+    //   length-prefixed suffix: [mt_bytes][4 bytes qem_len LE][qem_bytes].
+    //   Signed with ML-DSA-65 using chaos_seed as the signing key seed.
+}
+
+// =============================================================================
+// INTERFACE: chronosync
+// =============================================================================
+//
+// Hypergraph Chronosync for Poset Resolution (HC-PR)
+//
+// O(|E| log |V|) poset resolution using hypergraph topology.
+// Privacy-preserving ZK merges and TupleChain anchoring for causal consistency.
+//
+// WASM API:
+//
+// sync_add_event: func(
+//     id: string,
+//     payload: Uint8Array,
+//     dependencies_json: string,  // JSON array of dependency event IDs
+//     chaos_seed: Uint8Array      // 32 bytes
+// ) -> result<bool, JsValue>
+//   Add an event to the poset. Returns true on success.
+//
+// sync_resolve: func(
+//     chaos_seed: Uint8Array    // 32 bytes
+// ) -> result<string, JsValue>
+//   Resolve the poset using topological sort with ZK merges.
+//   Returns JSON array of ordered event IDs.
+//
+// sync_prove_merge: func(
+//     event_a: string,
+//     event_b: string,
+//     chaos_seed: Uint8Array    // 32 bytes
+// ) -> result<string, JsValue>
+//   Generate a ZK merge proof for conflict resolution.
+//   Returns JSON PrivacyProof.
+//
+// sync_anchor: func(
+//     chaos_seed: Uint8Array    // 32 bytes
+// ) -> string
+//   Anchor the resolved order to TupleChain. Returns anchor hash hex.
+//
+// sync_event_count: func() -> u32
+//   Returns number of events in the poset.
+
+interface chronosync {
+    // sync_add_event(id, payload, dependencies_json, chaos_seed) -> bool | Error
+    // sync_resolve(chaos_seed) -> string | Error
+    // sync_prove_merge(event_a, event_b, chaos_seed) -> string | Error
+    // sync_anchor(chaos_seed) -> string
+    // sync_event_count() -> u32
+}
+
+// =============================================================================
+// SHARED TYPES (informational)
+// =============================================================================
+//
+// All complex types cross the WASM boundary as JSON strings.
+//
+// PrivacyProof JSON:
+// {
+//   "proof_bytes":   string,   // hex-encoded proof bytes
+//   "public_inputs": string,   // hex-encoded public inputs
+//   "scheme":        string,   // "Snark" | "Stark" | "Hybrid" | "Bulletproofs"
+//   "security_bits": u32,
+//   "proof_size":    u32,
+//   "chsh_value":    f64,
+//   "lyapunov":      f64
+// }
+//
+// DpNoiseFrame JSON:
+// {
+//   "renyi_alpha": u32,
+//   "bound":       f64,
+//   "epsilon":     f64,
+//   "noise_scale": f64
+// }
+//
+// GenomicToken JSON:
+// {
+//   "commitment":  string,   // hex-encoded Pedersen commitment
+//   "tuple_id":    string,   // 16-char hex tuple ID on Wyqcc L1
+//   "dp_epsilon":  f64
+// }
+//
+// BiometricSession JSON:
+// {
+//   "session_id":  string,
+//   "wyqcc_did":  string,
+//   "created_ms":  u64,
+//   "expiry_ms":   u64
+// }
+//
+// SphinxPacket JSON:
+// {
+//   "payload_hex": string,
+//   "hops":        u8,
+//   "is_decoy":    bool,
+//   "chaos_seed":  string
+// }
+//
+// IcosupleFrame JSON:
+// {
+//   "manifold_tensor_hex":    string,
+//   "proof_bundle_hex":       string,
+//   "chaos_state_hex":        string,
+//   "compressed":             bool,
+//   "signature_hex":          string,
+//   "signing_key_public_hex": string
+// }

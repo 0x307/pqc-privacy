@@ -1,0 +1,145 @@
+name: cargo-deny
+
+# Dependency advisory / license / ban / source scanning (0X3-119 / P1-06 pattern).
+#
+# THIS WORKFLOW IS EXPECTED TO FAIL, AND THAT IS THE INTENDED STATE.
+#
+# 0X3-119 ran cargo-deny for real against this crate. The `advisories` check FAILS on one
+# finding: RUSTSEC-2024-0384 (`instant`, unmaintained), pulled in transitively via
+# `reed-solomon-erasure`'s pinned `parking_lot = "0.11.2"` dependency — real erasure-coding
+# code used by `vault` in the default build, not an opt-in feature. No safe upgrade exists;
+# `reed-solomon-erasure` has not published a release that bumps past `parking_lot` 0.11. Ed's
+# recorded decision (SECURITY.md, 2026-09-01) is ACCEPT AND DOCUMENT, not suppress:
+#
+#   - `deny.toml`'s `advisories.ignore` stays EMPTY. Nothing is silently hidden from the tool.
+#   - The accepted RUSTSEC ID is listed in SECURITY.md with its rationale.
+#   - A red run here is the standing, honest signal that this is still open and still
+#     accepted -- and it is what will surface a GENUINELY NEW advisory landing on top of it.
+#
+# This lives in its own workflow file rather than in ci.yml so this permanent, expected red
+# does not drag the main CI badge down on a public repo. "Non-blocking" here means SEPARATE
+# FROM ci.yml AND NOT A REQUIRED STATUS CHECK -- it does NOT mean the failure is hidden.
+#
+# Do not add `continue-on-error: true` to make this report green. Do not add entries to
+# `advisories.ignore`. Both destroy the exact signal this decision deliberately preserves.
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  schedule:
+    # Weekly, so a new advisory surfaces without anyone remembering to look -- the whole
+    # reason this doesn't only run at publish time.
+    - cron: "0 6 * * 1"
+  workflow_dispatch: {}
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  cargo-deny:
+    name: cargo-deny (${{ matrix.checks }})
+    runs-on: ubuntu-latest
+    strategy:
+      # A failure on any one check still runs the rest -- advisories, bans, licenses, and
+      # sources are independent questions and one shouldn't hide the others. `fail-fast:
+      # false` is what actually delivers that; `continue-on-error` would instead report the
+      # failing job as GREEN, burying the signal and (because `failure()` would never fire)
+      # silently disabling the issue-filing job below.
+      fail-fast: false
+      matrix:
+        checks:
+          - advisories
+          - bans
+          - licenses
+          - sources
+    steps:
+      - uses: actions/checkout@v4
+      - uses: EmbarkStudios/cargo-deny-action@v2
+        with:
+          command: check ${{ matrix.checks }}
+          arguments: --config deny.toml
+          # Overrides the action's `--all-features` default. Not a loss: deny.toml sets
+          # `all-features = true` under [graph] itself, so the full opt-in surface (genomic,
+          # enclave, wasm) is still scanned -- and it's scanned that way for anyone running
+          # cargo-deny locally too, not just in CI.
+
+  # A failing advisory must do more than turn a run red -- especially here, where red is the
+  # steady state and therefore easy to stop noticing.
+  #
+  # Excludes `pull_request`: a PR from a fork gets a read-only GITHUB_TOKEN, so
+  # `issues: write` isn't grantable and this job would fail on permissions rather than on
+  # anything real. PR runs still go red, which is the point of a PR run; push and the weekly
+  # cron are what file the issue.
+  open-issue-on-failure:
+    name: File/refresh tracking issue
+    needs: cargo-deny
+    if: failure() && github.event_name != 'pull_request'
+    runs-on: ubuntu-latest
+    permissions:
+      issues: write
+    steps:
+      - name: Open or update issue for failing cargo-deny scan
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const title = "cargo-deny scan failed";
+
+            // The weekly cron is the heartbeat: it comments every time so there's a dated
+            // trail even while the issue stays open. Push and manual runs only OPEN the
+            // issue if none exists -- with a permanently-failing advisories check,
+            // commenting on every push to main would bury the issue in noise.
+            const isHeartbeat = context.eventName === "schedule";
+
+            const { data: existing } = await github.rest.issues.listForRepo({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              state: "open",
+              labels: "security,cargo-deny",
+            });
+            const already = existing.find(i => i.title === title);
+
+            if (already && !isHeartbeat) {
+              core.info(`Issue #${already.number} is already open; not commenting for a ${context.eventName} run.`);
+              return;
+            }
+
+            const body = [
+              `A \`cargo-deny\` run failed (event: \`${context.eventName}\`).`,
+              ``,
+              `Run: ${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`,
+              ``,
+              `Check the run output for which category (advisories / bans / licenses /`,
+              `sources) failed.`,
+              ``,
+              `**Before treating this as new:** RUSTSEC-2024-0384 (\`instant\`, via`,
+              `\`reed-solomon-erasure\`) is already known and accepted, see`,
+              `[SECURITY.md](../blob/main/SECURITY.md#known-and-accepted-advisories).`,
+              `This job fires on that too, by design. What matters is whether anything is`,
+              `failing *beyond* that one advisory -- a new RUSTSEC ID, a license, a ban, or`,
+              `a source.`,
+              ``,
+              `Record the decision -- resolved, accepted, or blocking -- in SECURITY.md.`,
+            ].join("\n");
+
+            if (already) {
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: already.number,
+                body,
+              });
+            } else {
+              await github.rest.issues.create({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                title,
+                body,
+                labels: ["security", "cargo-deny"],
+              });
+            }
