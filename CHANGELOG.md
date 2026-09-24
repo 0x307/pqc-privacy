@@ -21,6 +21,8 @@ Documentation and metadata only. No change to the API, the wire formats or behav
   import name, which is unchanged).
 - This repository now carries the 0.1.1 and 0.1.2 manifest changes; before this release it
   still showed the 0.1.0 manifest although the source matched.
+- `Cargo.lock` moves from pqc-sig 0.4.0, now yanked, to 0.4.1. This lockfile only governs this
+  repository's own builds; a crate that depends on this one resolves pqc-sig itself.
 
 ## [0.1.2] - 2026-09-10
 
