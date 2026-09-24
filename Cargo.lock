@@ -722,7 +722,7 @@ dependencies = [
 
 [[package]]
 name = "pqc-privacy"
-version = "0.1.0"
+version = "0.1.2"
 dependencies = [
  "aes-gcm",
  "base64ct",
@@ -752,9 +752,9 @@ dependencies = [
 
 [[package]]
 name = "pqc-sig"
-version = "0.3.0"
+version = "0.4.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b169ac32cb9331c93185101e9ce7a5bce2a6ce0b2f5cd75f8ec1a05694794d31"
+checksum = "4478bb48ea85e73895b7ee5724120aaacc4dfe97e30a0a3982ab6252d35433f4"
 dependencies = [
  "base64ct",
  "bs58",
