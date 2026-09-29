@@ -25,7 +25,7 @@ crate-type = ["cdylib", "rlib"]
 
 [dependencies]
 # Post-quantum KEM — ML-KEM-768/1024, FIPS 203
-pqc-kem = { version = "0.2", default-features = false }
+pqc-kem = { version = "0.3", default-features = false }
 
 # Post-quantum signatures — ML-DSA-65, SLH-DSA, FIPS 204/205
 pqc-sig = { version = "0.4", default-features = false }

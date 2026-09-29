@@ -17,7 +17,13 @@ version = 2
 db-path = "~/.cargo/advisory-db"
 db-urls = ["https://github.com/rustsec/advisory-db"]
 yanked = "deny"
-ignore = []
+ignore = [
+  # `instant` is unmaintained with no safe upgrade. It reaches this crate only
+  # through reed-solomon-erasure 6.0.0 -> parking_lot 0.11, and as the optional
+  # `instant/wasm-bindgen` shim that makes that parking_lot work on wasm. No code
+  # here calls it. Remove this entry when reed-solomon-erasure is replaced.
+  { id = "RUSTSEC-2024-0384", reason = "unmaintained, transitive via reed-solomon-erasure 6.0.0; no safe upgrade; replacing the Reed-Solomon crate is tracked separately" },
+]
 
 [licenses]
 version = 2
