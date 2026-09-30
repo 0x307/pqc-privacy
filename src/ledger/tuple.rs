@@ -74,7 +74,7 @@ pub fn anchor_tuple(tuple: &mut PrivacyTuple) -> String {
     hasher.update(tuple.subject.as_bytes());
     hasher.update(tuple.predicate.as_bytes());
     hasher.update(&tuple.object);
-    hasher.update(&tuple.expiry_ms.to_le_bytes());
+    hasher.update(tuple.expiry_ms.to_le_bytes());
     hasher.update(b"wyqcc-l1-anchor");
     let commitment: [u8; 32] = hasher.finalize().into();
 
@@ -114,7 +114,7 @@ pub fn verify_anchor(tuple: &PrivacyTuple) -> bool {
     hasher.update(tuple.subject.as_bytes());
     hasher.update(tuple.predicate.as_bytes());
     hasher.update(&tuple.object);
-    hasher.update(&tuple.expiry_ms.to_le_bytes());
+    hasher.update(tuple.expiry_ms.to_le_bytes());
     hasher.update(b"wyqcc-l1-anchor");
     let commitment: [u8; 32] = hasher.finalize().into();
 

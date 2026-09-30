@@ -120,7 +120,7 @@ impl IcedCache {
     fn derive_enc_key(&self, chaos_seed: &[u8; 32], now_ms: u64) -> String {
         let mut hasher = Sha256::new();
         hasher.update(chaos_seed);
-        hasher.update(&now_ms.to_le_bytes());
+        hasher.update(now_ms.to_le_bytes());
         hasher.update(b"qfkh-cdn-key-v1");
         hex::encode(hasher.finalize())
     }

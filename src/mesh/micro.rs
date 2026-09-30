@@ -129,7 +129,7 @@ impl EntropyElasticityManager {
         let mut hasher = Sha256::new();
         hasher.update(node.id.as_bytes());
         hasher.update(chaos_seed);
-        hasher.update(&ts.to_le_bytes());
+        hasher.update(ts.to_le_bytes());
         hasher.update(match node.source {
             EntropySource::PhysicalQrng  => b"qrng-v1" as &[u8],
             EntropySource::VirtualChaos  => b"chaos-v1",
@@ -144,6 +144,8 @@ impl EntropyElasticityManager {
         hex::encode(hasher.finalize())
     }
 
+    // Not `clamp`: `max(..).min(..)` maps NaN to the lower bound, `clamp` passes it through.
+    #[allow(clippy::manual_clamp)]
     fn estimate_h_min(&self, bytes: &[u8]) -> f64 {
         if bytes.is_empty() { return 0.0; }
         let mut freq = [0u32; 256];
@@ -156,7 +158,7 @@ impl EntropyElasticityManager {
 
     fn prove_quality(&self, h_min: f64, chaos_seed: &[u8; 32]) -> PrivacyProof {
         let mut hasher = Sha256::new();
-        hasher.update(&h_min.to_le_bytes());
+        hasher.update(h_min.to_le_bytes());
         hasher.update(chaos_seed);
         hasher.update(b"entropy-quality-v1");
         let commitment: [u8; 32] = hasher.finalize().into();

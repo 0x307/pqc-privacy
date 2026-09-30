@@ -79,6 +79,31 @@ jobs:
       - name: cargo test --all-features
         run: cargo test --all-features --locked --verbose
 
+  # Zero warnings, kept at zero: clippy and rustdoc with -D warnings, on default features
+  # and on --all-features.
+  lint:
+    name: clippy + rustdoc (-D warnings)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout (fresh clone, no cache)
+        uses: actions/checkout@v4
+
+      - name: Install Rust toolchain (fresh, no cache, clippy component)
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          components: clippy
+
+      - name: cargo clippy --all-targets -- -D warnings (default features)
+        run: cargo clippy --all-targets --locked -- -D warnings
+
+      - name: cargo clippy --all-targets --all-features -- -D warnings
+        run: cargo clippy --all-targets --all-features --locked -- -D warnings
+
+      - name: cargo doc --no-deps --all-features (-D warnings)
+        run: cargo doc --no-deps --all-features --locked
+        env:
+          RUSTDOCFLAGS: -D warnings
+
   # The documented WASM build target (README "Building" section): default features (std)
   # plus wasm, targeting wasm32-unknown-unknown. NOTE: this is deliberately NOT the same
   # invocation as build-wasm.ps1's wasm-pack step (`--no-default-features --features wasm`)

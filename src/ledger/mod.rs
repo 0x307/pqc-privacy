@@ -137,8 +137,8 @@ impl TupleChain {
         let mut hasher = Sha256::new();
         hasher.update(tuple.subject.as_bytes());
         hasher.update(tuple.predicate.as_bytes());
-        hasher.update(&tuple.expiry_ms.to_le_bytes());
-        hasher.update(&self.total_count.to_le_bytes());
+        hasher.update(tuple.expiry_ms.to_le_bytes());
+        hasher.update(self.total_count.to_le_bytes());
         hex::encode(hasher.finalize())[..16].to_string()
     }
 }

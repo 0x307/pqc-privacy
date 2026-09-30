@@ -2,7 +2,7 @@
 //!
 //! **Non-default module** (`genomic` feature). "Alleles" are single ASCII characters
 //! (`A`/`C`/`G`/`T`) mapped to 2-bit codes and SHA-256/HKDF-hashed into commitments;
-//! [`login`]'s "biometric" authentication is byte-equality comparison between two
+//! [`login`](crate::genomic::login)'s "biometric" authentication is byte-equality comparison between two
 //! caller-supplied strings above a 98% match threshold. There is no real genomic-sequence
 //! or biometric-signal processing anywhere in this module — no sequencing data, no
 //! similarity-tolerant matching over real SNP arrays. Gated off by default because
@@ -72,7 +72,7 @@ impl SnpCommitment {
     pub fn verify(&self) -> bool {
         let Ok(bf) = hex::decode(&self.blinding_factor) else { return false; };
         let mut hasher = Sha256::new();
-        hasher.update(&[self.allele_bits]);
+        hasher.update([self.allele_bits]);
         hasher.update(&bf);
         hasher.update(b"snp-commit-v1");
         let expected = hex::encode(hasher.finalize());
@@ -104,7 +104,7 @@ fn laplace_noise(chaos_seed: &[u8; 32], position: usize, dp_epsilon: f64) -> f64
     // Deterministic noise from chaos seed + position
     let mut hasher = Sha256::new();
     hasher.update(chaos_seed);
-    hasher.update(&(position as u64).to_le_bytes());
+    hasher.update((position as u64).to_le_bytes());
     hasher.update(b"dp-laplace-v1");
     let h: [u8; 32] = hasher.finalize().into();
     let raw = u64::from_le_bytes(h[..8].try_into().unwrap_or([0u8; 8]));
@@ -154,8 +154,8 @@ pub fn nano_tokenize_with_id(
 
         // Commitment: SHA-256(allele_bits || blinding_factor || "snp-commit-v1")
         let mut hasher = Sha256::new();
-        hasher.update(&[bits]);
-        hasher.update(&blinding_factor);
+        hasher.update([bits]);
+        hasher.update(blinding_factor);
         hasher.update(b"snp-commit-v1");
         let commitment: [u8; 32] = hasher.finalize().into();
 
@@ -196,8 +196,8 @@ pub fn make_snp_commitment(
     let blinding_factor = derive_blinding_factor(chaos_seed, patient_id, snp_position)?;
 
     let mut hasher = Sha256::new();
-    hasher.update(&[bits]);
-    hasher.update(&blinding_factor);
+    hasher.update([bits]);
+    hasher.update(blinding_factor);
     hasher.update(b"snp-commit-v1");
     let commitment: [u8; 32] = hasher.finalize().into();
 
@@ -238,12 +238,12 @@ pub fn prove_allele_trait(
     // statement_hash = SHA-256("allele-trait-v1" || allele_bits)
     let mut stmt_hasher = Sha256::new();
     stmt_hasher.update(b"allele-trait-v1");
-    stmt_hasher.update(&[allele_bits]);
+    stmt_hasher.update([allele_bits]);
     let statement_hash: [u8; 32] = stmt_hasher.finalize().into();
 
     // witness_hash = SHA-256(allele_bits || blinding_factor || "snp-commit-v1")
     let mut wit_hasher = Sha256::new();
-    wit_hasher.update(&[allele_bits]);
+    wit_hasher.update([allele_bits]);
     wit_hasher.update(blinding_factor);
     wit_hasher.update(b"snp-commit-v1");
     let witness_hash: [u8; 32] = wit_hasher.finalize().into();

@@ -3,7 +3,7 @@
 //! **What this module actually does.** "Entangling" two proofs is
 //! `SHA-256(A.commitment_bytes || B.commitment_bytes || chaos_phase)` — ordinary hash
 //! chaining. Its reported "CHSH" score is `2√2 · |cos(phase)|`, clamped to `2.828427`, and
-//! [`aggregate_recursive`] derives `phase` specifically within `[0, 0.1]` radians **to
+//! [`aggregate_recursive`](crate::zk::entanglement::EntanglementEngine::aggregate_recursive) derives `phase` specifically within `[0, 0.1]` radians **to
 //! guarantee the score lands above 2.8 by construction** — this is a caller-chosen scalar
 //! forced past a threshold, not a Bell-inequality violation measured from any physical or
 //! simulated quantum state. "Simulated Bell-state correlations on lattice qubits" describes
@@ -91,7 +91,7 @@ impl EntanglementEngine {
         let mut hasher = Sha256::new();
         hasher.update(&a_commitment);
         hasher.update(&b_commitment);
-        hasher.update(&chaos_phase.to_le_bytes());
+        hasher.update(chaos_phase.to_le_bytes());
         hasher.update(b"bell-cz-entangle-v1");
         let tensor: [u8; 32] = hasher.finalize().into();
 
@@ -112,8 +112,8 @@ impl EntanglementEngine {
         // Build entangled proof_bytes = tensor_commitment || challenge || response
         // challenge = SHA-256(tensor || chaos_phase)
         let mut ch_hasher = Sha256::new();
-        ch_hasher.update(&tensor);
-        ch_hasher.update(&chaos_phase.to_le_bytes());
+        ch_hasher.update(tensor);
+        ch_hasher.update(chaos_phase.to_le_bytes());
         ch_hasher.update(b"entangle-challenge-v1");
         let challenge: [u8; 32] = ch_hasher.finalize().into();
 
@@ -121,7 +121,7 @@ impl EntanglementEngine {
         let mut resp_hasher = Sha256::new();
         resp_hasher.update(&a_commitment);
         resp_hasher.update(&b_commitment);
-        resp_hasher.update(&challenge);
+        resp_hasher.update(challenge);
         resp_hasher.update(b"entangle-response-v1");
         let response: [u8; 32] = resp_hasher.finalize().into();
 
@@ -189,8 +189,8 @@ impl EntanglementEngine {
                     // Derive phase from chaos seed + round + index
                     let mut phase_hasher = Sha256::new();
                     phase_hasher.update(chaos_seed);
-                    phase_hasher.update(&fold_round.to_le_bytes());
-                    phase_hasher.update(&(i as u64).to_le_bytes());
+                    phase_hasher.update(fold_round.to_le_bytes());
+                    phase_hasher.update((i as u64).to_le_bytes());
                     let phase_bytes: [u8; 32] = phase_hasher.finalize().into();
                     // Map first 8 bytes to phase angle in [0, 0.1] rad.
                     // This guarantees CHSH = 2√2 * |cos(phase)| ≥ 2√2 * cos(0.1) ≈ 2.814 > 2.8.
@@ -220,21 +220,21 @@ impl EntanglementEngine {
         let mut final_hasher = Sha256::new();
         final_hasher.update(&commitment_bytes);
         final_hasher.update(chaos_seed);
-        final_hasher.update(&(all_weights.iter().sum::<u64>()).to_le_bytes());
+        final_hasher.update((all_weights.iter().sum::<u64>()).to_le_bytes());
         final_hasher.update(b"halo2-final-v1");
         let final_commitment: [u8; 32] = final_hasher.finalize().into();
 
         // Final challenge
         let mut ch_hasher = Sha256::new();
-        ch_hasher.update(&final_commitment);
+        ch_hasher.update(final_commitment);
         ch_hasher.update(chaos_seed);
         ch_hasher.update(b"halo2-final-challenge-v1");
         let final_challenge: [u8; 32] = ch_hasher.finalize().into();
 
         // Final response
         let mut resp_hasher = Sha256::new();
-        resp_hasher.update(&final_commitment);
-        resp_hasher.update(&final_challenge);
+        resp_hasher.update(final_commitment);
+        resp_hasher.update(final_challenge);
         resp_hasher.update(b"halo2-final-response-v1");
         let final_response: [u8; 32] = resp_hasher.finalize().into();
 
@@ -292,8 +292,8 @@ mod tests {
         let h: [u8; 32] = Sha256::digest(label.as_bytes()).into();
         // Simulate a proper SNARK proof_bytes = commitment || challenge || response
         let commitment = h;
-        let challenge: [u8; 32] = Sha256::digest(&h).into();
-        let response: [u8; 32] = Sha256::digest(&challenge).into();
+        let challenge: [u8; 32] = Sha256::digest(h).into();
+        let response: [u8; 32] = Sha256::digest(challenge).into();
         PrivacyProof {
             proof_bytes:   alloc::format!("{}{}{}",
                 hex::encode(commitment),

@@ -241,8 +241,8 @@ impl rand_core::RngCore for DeterministicRng {
         let mut pos = 0;
         while pos < dest.len() {
             let mut hasher = Sha256::new();
-            hasher.update(&self.state);
-            hasher.update(&self.counter.to_le_bytes());
+            hasher.update(self.state);
+            hasher.update(self.counter.to_le_bytes());
             let hash = hasher.finalize();
             let copy_len = (dest.len() - pos).min(32);
             dest[pos..pos + copy_len].copy_from_slice(&hash[..copy_len]);

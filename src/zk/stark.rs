@@ -267,7 +267,7 @@ fn prove_statement_inner(
     // ── Step 1: Derive evaluation point ──────────────────────────────────────
     // eval_point = SHA-256(statement_hash || chaos_seed)[0..8] as u64
     let mut ep_hasher = Sha256::new();
-    ep_hasher.update(&statement_hash);
+    ep_hasher.update(statement_hash);
     ep_hasher.update(chaos_seed);
     let ep_hash: [u8; 32] = ep_hasher.finalize().into();
     let eval_point = u64::from_le_bytes(ep_hash[..8].try_into().unwrap_or([0u8; 8]));
@@ -280,8 +280,8 @@ fn prove_statement_inner(
     // ── Step 3: Compute polynomial commitment ─────────────────────────────────
     // commitment = SHA-256(eval_value || statement_hash)
     let mut cm_hasher = Sha256::new();
-    cm_hasher.update(&eval_value_bytes);
-    cm_hasher.update(&statement_hash);
+    cm_hasher.update(eval_value_bytes);
+    cm_hasher.update(statement_hash);
     let commitment: [u8; 32] = cm_hasher.finalize().into();
 
     // ── Step 4: Build Merkle tree over witness chunks ─────────────────────────
@@ -303,7 +303,7 @@ fn prove_statement_inner(
     // Proof size: commitment(32) + eval_value(8) + merkle_root(32) + path(32 * depth)
     let proof_size = 32 + 8 + 32 + path.len() * 32;
 
-    let path_hex: Vec<String> = path.iter().map(|p| hex::encode(p)).collect();
+    let path_hex: Vec<String> = path.iter().map(hex::encode).collect();
 
     Ok(StarkProof {
         commitment:    hex::encode(commitment),

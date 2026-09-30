@@ -120,8 +120,8 @@ pub fn prove_with_domain(
     // ── Step 2: Fiat-Shamir challenge ─────────────────────────────────────────
     // challenge = SHA-256(commitment || statement_hash || chaos_seed)
     let mut ch_hasher = Sha256::new();
-    ch_hasher.update(&commitment_bytes);
-    ch_hasher.update(&statement_hash);
+    ch_hasher.update(commitment_bytes);
+    ch_hasher.update(statement_hash);
     ch_hasher.update(chaos_seed);
     let challenge_bytes: [u8; 32] = ch_hasher.finalize().into();
 
@@ -231,7 +231,7 @@ pub fn aggregate(
         let commitment_bytes = hex::decode(&p.commitment).unwrap_or_default();
         let mut hasher = Sha256::new();
         hasher.update(&commitment_bytes);
-        hasher.update(&weight.to_le_bytes());
+        hasher.update(weight.to_le_bytes());
         hasher.update(b"merkle-leaf-v1");
         hasher.finalize().to_vec()
     }).collect();
@@ -458,14 +458,14 @@ mod tests {
     #[test]
     fn test_merkle_root_single() {
         let leaf = vec![1u8; 32];
-        let root = merkle_root_of(&[leaf.clone()]);
+        let root = merkle_root_of(std::slice::from_ref(&leaf));
         assert_eq!(root, leaf);
     }
 
     #[test]
     fn test_merkle_path_verify() {
         let leaves: Vec<Vec<u8>> = (0..4u8)
-            .map(|i| Sha256::digest(&[i]).to_vec())
+            .map(|i| Sha256::digest([i]).to_vec())
             .collect();
         let root = merkle_root_of(&leaves);
         for i in 0..leaves.len() {

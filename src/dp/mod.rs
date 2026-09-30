@@ -196,9 +196,9 @@ impl DpEngine {
     /// Generate a ZKP proof of DP compliance.
     pub fn prove_compliance(&self) -> PrivacyProof {
         let mut hasher = Sha256::new();
-        hasher.update(&self.epsilon_consumed.to_le_bytes());
-        hasher.update(&self.delta_consumed.to_le_bytes());
-        hasher.update(&self.query_count.to_le_bytes());
+        hasher.update(self.epsilon_consumed.to_le_bytes());
+        hasher.update(self.delta_consumed.to_le_bytes());
+        hasher.update(self.query_count.to_le_bytes());
         hasher.update(b"dp-compliance-v1");
         let commitment: [u8; 32] = hasher.finalize().into();
 
@@ -276,8 +276,7 @@ mod tests {
 
     #[test]
     fn test_noise_sample_laplace() {
-        let mut config = DpConfig::default();
-        config.mechanism = DpMechanism::Laplace;
+        let config = DpConfig { mechanism: DpMechanism::Laplace, ..DpConfig::default() };
         let engine = DpEngine::with_config(config);
         let seed = [42u8; 32];
         let noise = engine.noise_sample(1.0, &seed);

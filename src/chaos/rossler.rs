@@ -55,7 +55,7 @@ impl RosslerState {
 
 /// Rössler attractor simulator — backup chaos source.
 ///
-/// Activates when [`ChuaAttractor::is_stalled()`] returns `true`.
+/// Activates when [`ChuaAttractor::is_stalled()`](crate::chaos::chua::ChuaAttractor::is_stalled) returns `true`.
 /// Provides 3D hyperbolic flow for routing perturbation and DP noise.
 #[derive(Debug, Clone)]
 pub struct RosslerAttractor {
@@ -99,6 +99,8 @@ impl RosslerAttractor {
     /// Advance one step using Euler method (lightweight for backup).
     ///
     /// Uses Euler rather than RK4 to minimize overhead when acting as backup.
+    // Not `clamp`: `max(..).min(..)` maps NaN to the lower bound, `clamp` passes it through.
+    #[allow(clippy::manual_clamp)]
     pub fn step(&mut self) {
         let dt = self.params.dt;
         let s  = self.state;
@@ -133,7 +135,7 @@ impl RosslerAttractor {
 
     /// Sample `n` bits from the Rössler trajectory.
     pub fn sample_bits(&mut self, n: usize) -> Vec<u8> {
-        let mut bits = Vec::with_capacity((n + 7) / 8);
+        let mut bits = Vec::with_capacity(n.div_ceil(8));
         let mut byte = 0u8;
         let mut bit_pos = 0u8;
 

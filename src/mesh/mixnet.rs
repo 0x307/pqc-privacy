@@ -227,7 +227,7 @@ pub fn generate_decoys(
         let mut decoy_seed = [0u8; 32];
         let mut hasher = Sha256::new();
         hasher.update(chaos_seed);
-        hasher.update(&(i as u64).to_le_bytes());
+        hasher.update((i as u64).to_le_bytes());
         hasher.update(b"decoy-seed-v1");
         decoy_seed.copy_from_slice(&hasher.finalize());
 
@@ -238,8 +238,8 @@ pub fn generate_decoys(
         for h in 0..actual_hops {
             let mut hop_seed = [0u8; 32];
             let mut hs = Sha256::new();
-            hs.update(&decoy_seed);
-            hs.update(&(h as u64).to_le_bytes());
+            hs.update(decoy_seed);
+            hs.update((h as u64).to_le_bytes());
             hs.update(b"decoy-hop-key-v1");
             hop_seed.copy_from_slice(&hs.finalize());
 
@@ -263,12 +263,10 @@ pub fn generate_decoys(
         // Fixed-size decoy payload (32 bytes of zeros — indistinguishable from real)
         let decoy_payload = vec![0u8; 32];
 
-        match build_sphinx_onion(&fake_hops, &decoy_payload, &decoy_seed) {
-            Ok(mut pkt) => {
-                pkt.decoy = true;
-                decoys.push(pkt);
-            }
-            Err(_) => {} // Skip failed decoys
+        // A decoy that fails to build is skipped.
+        if let Ok(mut pkt) = build_sphinx_onion(&fake_hops, &decoy_payload, &decoy_seed) {
+            pkt.decoy = true;
+            decoys.push(pkt);
         }
     }
 
@@ -302,8 +300,8 @@ pub fn build_sphinx_packet(
     for i in 0..n {
         let mut hop_seed = [0u8; 32];
         let mut hasher = Sha256::new();
-        hasher.update(&config.chaos_seed);
-        hasher.update(&(i as u64).to_le_bytes());
+        hasher.update(config.chaos_seed);
+        hasher.update((i as u64).to_le_bytes());
         hasher.update(b"sphinx-hop-keygen-v1");
         hop_seed.copy_from_slice(&hasher.finalize());
 
@@ -461,7 +459,7 @@ pub fn unwrap_layer(packet: &SphinxPacket, hop: u8, chaos_seed: &[u8; 32]) -> Ve
     // Legacy: re-hash to simulate layer removal
     let mut hasher = Sha256::new();
     hasher.update(&packet.payload);
-    hasher.update(&[hop]);
+    hasher.update([hop]);
     hasher.update(chaos_seed);
     hasher.update(b"sphinx-unwrap-v1");
     hasher.finalize().to_vec()
@@ -505,7 +503,7 @@ fn poisson_sample(lambda: f64, chaos_seed: &[u8]) -> usize {
         // Generate a uniform random value in (0, 1) from chaos_seed
         let mut hasher = Sha256::new();
         hasher.update(chaos_seed);
-        hasher.update(&counter.to_le_bytes());
+        hasher.update(counter.to_le_bytes());
         hasher.update(b"poisson-v1");
         let hash = hasher.finalize();
         let raw = u64::from_le_bytes(hash[..8].try_into().unwrap_or([0u8; 8]));
@@ -537,7 +535,7 @@ mod tests {
             let mut hop_seed = [0u8; 32];
             let mut hasher = Sha256::new();
             hasher.update(seed);
-            hasher.update(&(i as u64).to_le_bytes());
+            hasher.update((i as u64).to_le_bytes());
             hop_seed.copy_from_slice(&hasher.finalize());
             let (ek, _dk) = keys::generate_keypair(&hop_seed).unwrap();
             (alloc::format!("node-{i}"), ek)
@@ -586,8 +584,8 @@ mod tests {
         for i in 0..n {
             let mut hop_seed = [0u8; 32];
             let mut hasher = Sha256::new();
-            hasher.update(&seed);
-            hasher.update(&(i as u64).to_le_bytes());
+            hasher.update(seed);
+            hasher.update((i as u64).to_le_bytes());
             hop_seed.copy_from_slice(&hasher.finalize());
             let (ek, dk) = keys::generate_keypair(&hop_seed).unwrap();
             hop_keys.push((alloc::format!("node-{i}"), ek, dk));
@@ -619,8 +617,7 @@ mod tests {
 
     #[test]
     fn test_invalid_hops_legacy() {
-        let mut cfg = SphinxConfig::default();
-        cfg.hops = 3;
+        let cfg = SphinxConfig { hops: 3, ..SphinxConfig::default() };
         assert!(build_sphinx_packet(b"x".to_vec(), &cfg, false).is_err());
     }
 

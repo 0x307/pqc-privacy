@@ -93,7 +93,7 @@ impl SovereignMessenger {
         // QFKH key ID
         let mut key_hasher = Sha256::new();
         key_hasher.update(chaos_seed);
-        key_hasher.update(&timestamp_ms.to_le_bytes());
+        key_hasher.update(timestamp_ms.to_le_bytes());
         key_hasher.update(b"qfkh-key-id");
         let key_id = hex::encode(key_hasher.finalize())[..16].to_string();
 
@@ -244,7 +244,7 @@ impl SovereignMessenger {
     fn derive_group_nonce(&self, group_id: &str, timestamp_ms: u64) -> [u8; NONCE_LEN] {
         let mut hasher = Sha256::new();
         hasher.update(group_id.as_bytes());
-        hasher.update(&timestamp_ms.to_le_bytes());
+        hasher.update(timestamp_ms.to_le_bytes());
         hasher.update(b"group-nonce-v1");
         let h: [u8; 32] = hasher.finalize().into();
         h[..NONCE_LEN].try_into().unwrap_or([0u8; NONCE_LEN])

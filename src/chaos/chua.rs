@@ -119,6 +119,8 @@ impl ChuaAttractor {
     }
 
     /// Advance one step using 4th-order Runge-Kutta.
+    // Not `clamp`: `max(..).min(..)` maps NaN to the lower bound, `clamp` passes it through.
+    #[allow(clippy::manual_clamp)]
     pub fn step(&mut self) {
         let dt = self.params.dt;
         let s  = self.state;
@@ -165,7 +167,7 @@ impl ChuaAttractor {
     ///
     /// Each step contributes 1 bit: sign(x) XOR sign(z).
     pub fn sample_bits(&mut self, n: usize) -> Vec<u8> {
-        let mut bits = Vec::with_capacity((n + 7) / 8);
+        let mut bits = Vec::with_capacity(n.div_ceil(8));
         let mut byte = 0u8;
         let mut bit_pos = 0u8;
 

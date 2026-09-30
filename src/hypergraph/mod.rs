@@ -76,6 +76,7 @@ impl PrivacyHypergraph {
     /// - `probabilistic`: DP noise parameter ε
     /// - `quantum`:      phase angle from chaos oracle
     /// - `chaotic`:      Chua attractor trajectory value
+    #[allow(clippy::too_many_arguments)] // one argument per vertex field
     pub fn encode_vertex(
         &mut self,
         id: impl Into<String>,
@@ -98,11 +99,11 @@ impl PrivacyHypergraph {
         // Commitment = SHA-256(id || coord bytes)
         let mut hasher = Sha256::new();
         hasher.update(id.as_bytes());
-        hasher.update(&spatial.to_le_bytes());
-        hasher.update(&temporal.to_le_bytes());
-        hasher.update(&dp_epsilon.to_le_bytes());
-        hasher.update(&phase_angle.to_le_bytes());
-        hasher.update(&chaos_traj.to_le_bytes());
+        hasher.update(spatial.to_le_bytes());
+        hasher.update(temporal.to_le_bytes());
+        hasher.update(dp_epsilon.to_le_bytes());
+        hasher.update(phase_angle.to_le_bytes());
+        hasher.update(chaos_traj.to_le_bytes());
         let commitment = hex::encode(hasher.finalize());
 
         let vertex = HypergraphVertex { id: id.clone(), coord, commitment, expiry_ms };
@@ -226,10 +227,10 @@ impl PrivacyHypergraph {
 
         // Commitment: SHA-256(vertex_count || edge_count || max_chsh)
         let mut hasher = Sha256::new();
-        hasher.update(&(self.vertices.len() as u64).to_le_bytes());
-        hasher.update(&(self.hyperedges.len() as u64).to_le_bytes());
-        hasher.update(&max_chsh.to_le_bytes());
-        hasher.update(&self.kk_factor.to_le_bytes());
+        hasher.update((self.vertices.len() as u64).to_le_bytes());
+        hasher.update((self.hyperedges.len() as u64).to_le_bytes());
+        hasher.update(max_chsh.to_le_bytes());
+        hasher.update(self.kk_factor.to_le_bytes());
         let commitment = hex::encode(hasher.finalize());
 
         Ok(PrivacyProof {

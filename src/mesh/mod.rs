@@ -7,18 +7,18 @@
 //! local simulation as `aethel-core`'s `htss.rs` hypercube routing: real code, exercised by
 //! tests, but modeling a distributed system rather than running one.
 //!
-//! One exception: the cryptography *inside* a single [`mixnet`] Sphinx packet is real —
+//! One exception: the cryptography *inside* a single [`mixnet`](crate::mesh::mixnet) Sphinx packet is real —
 //! genuine ML-KEM-768 encapsulation and AES-GCM-256 encryption per layer. The "mesh" that's
 //! said to carry that packet between nodes is what's simulated.
 //!
-//! - [`mixnet`]     — Sphinx packet construction (real onion-layer crypto, no transport)
-//! - [`bloom`]      — local Bloom filter
-//! - [`stake`]      — local stake bookkeeping, ML-DSA-65-signed commitments
-//! - [`index`]      — local Merkle Patricia Trie-style index
-//! - [`cdn`]        — local cache simulation
-//! - [`governance`] — local ballot bookkeeping, not a working voting system
-//! - [`keys`]       — local key-distribution bookkeeping, ML-DSA-65-signed
-//! - [`micro`]      — local entropy-elasticity bookkeeping
+//! - [`mixnet`](crate::mesh::mixnet)     — Sphinx packet construction (real onion-layer crypto, no transport)
+//! - [`bloom`](crate::mesh::bloom)      — local Bloom filter
+//! - [`stake`](crate::mesh::stake)      — local stake bookkeeping, ML-DSA-65-signed commitments
+//! - [`index`](crate::mesh::index)      — local Merkle Patricia Trie-style index
+//! - [`cdn`](crate::mesh::cdn)        — local cache simulation
+//! - [`governance`](crate::mesh::governance) — local ballot bookkeeping, not a working voting system
+//! - [`keys`](crate::mesh::keys)       — local key-distribution bookkeeping, ML-DSA-65-signed
+//! - [`micro`](crate::mesh::micro)      — local entropy-elasticity bookkeeping
 //!
 //! [`DW3BMesh`] is the in-process facade over all of the above. See the crate README's
 //! "What runs today vs. what is designed" for the full accounting.

@@ -1,13 +1,13 @@
 //! ZK module — hash-based proof constructions, **not** soundness-checked SNARK/STARK
 //!
-//! - [`stark`]        — Merkle tree + Horner-method evaluation, not a real zk-STARK
-//! - [`snark`]        — hash commit/challenge/response, not a real zk-SNARK (`verify()`
+//! - [`stark`](crate::zk::stark)        — Merkle tree + Horner-method evaluation, not a real zk-STARK
+//! - [`snark`](crate::zk::snark)        — hash commit/challenge/response, not a real zk-SNARK (`verify()`
 //!   doesn't check witness binding)
-//! - [`hybrid`]       — selects between the two above
-//! - [`entanglement`] — hash-chain aggregation with a simulated, self-satisfying "CHSH" score
+//! - [`hybrid`](crate::zk::hybrid)       — selects between the two above
+//! - [`entanglement`](crate::zk::entanglement) — hash-chain aggregation with a simulated, self-satisfying "CHSH" score
 //!
-//! Real ML-DSA-65 (FIPS 204) signing appears inside [`snark::aggregate`] and
-//! [`entanglement::aggregate_recursive`] — see each module's doc comment and the crate
+//! Real ML-DSA-65 (FIPS 204) signing appears inside [`snark::aggregate`](crate::zk::snark::aggregate) and
+//! [`entanglement::aggregate_recursive`](crate::zk::entanglement::EntanglementEngine::aggregate_recursive) — see each module's doc comment and the crate
 //! README's "What runs today vs. what is designed" for the full accounting.
 
 pub mod entanglement;

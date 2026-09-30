@@ -111,6 +111,7 @@ fn gf256_poly_eval(coeffs: &[u8], x: u8) -> u8 {
 
 /// Lagrange interpolation over GF(256) to recover f(0).
 /// `points` is a slice of (x, y) pairs where x != 0.
+#[allow(clippy::needless_range_loop)] // indexes several arrays in step
 fn gf256_lagrange_at_zero(points: &[(u8, u8)]) -> u8 {
     let mut secret = 0u8;
     let k = points.len();
@@ -196,8 +197,8 @@ pub fn encapsulate(encapsulation_key_bytes: &[u8]) -> Result<(Vec<u8>, Vec<u8>),
             let mut pos = 0;
             while pos < dest.len() {
                 let mut hasher = Sha256::new();
-                hasher.update(&self.state);
-                hasher.update(&self.counter.to_le_bytes());
+                hasher.update(self.state);
+                hasher.update(self.counter.to_le_bytes());
                 let hash = hasher.finalize();
                 let copy_len = (dest.len() - pos).min(32);
                 dest[pos..pos + copy_len].copy_from_slice(&hash[..copy_len]);
@@ -256,7 +257,7 @@ impl KeyManager {
         let mut sig_seed = [0u8; 32];
         let mut hasher = Sha256::new();
         hasher.update(chaos_seed);
-        hasher.update(&timestamp_ms.to_le_bytes());
+        hasher.update(timestamp_ms.to_le_bytes());
         hasher.update(b"ml-dsa-sig-seed-v1");
         sig_seed.copy_from_slice(&hasher.finalize());
 
@@ -272,7 +273,7 @@ impl KeyManager {
         // Key ID from SHA-256 of encapsulation key + timestamp
         let mut id_hasher = Sha256::new();
         id_hasher.update(&ek_bytes);
-        id_hasher.update(&timestamp_ms.to_le_bytes());
+        id_hasher.update(timestamp_ms.to_le_bytes());
         let key_id = hex::encode(id_hasher.finalize())[..16].to_string();
 
         Ok(SignedKeyPair {
@@ -288,6 +289,7 @@ impl KeyManager {
     ///
     /// For each byte of the secret, generates a random degree-(k-1) polynomial
     /// over GF(256) where f(0) = secret_byte, then evaluates at points 1..=n.
+    #[allow(clippy::needless_range_loop)] // indexes several arrays in step
     pub fn split_secret(
         &self,
         secret: &[u8; 32],
@@ -301,8 +303,8 @@ impl KeyManager {
             for coeff_idx in 1..self.k {
                 let mut hasher = Sha256::new();
                 hasher.update(chaos_seed);
-                hasher.update(&(byte_idx as u64).to_le_bytes());
-                hasher.update(&(coeff_idx as u64).to_le_bytes());
+                hasher.update((byte_idx as u64).to_le_bytes());
+                hasher.update((coeff_idx as u64).to_le_bytes());
                 hasher.update(b"shamir-coeff-v1");
                 let h: [u8; 32] = hasher.finalize().into();
                 coeffs.push(h[0]); // use first byte as coefficient
@@ -323,6 +325,7 @@ impl KeyManager {
     }
 
     /// Reconstruct a secret from k shares using Lagrange interpolation over GF(256).
+    #[allow(clippy::needless_range_loop)] // indexes several arrays in step
     pub fn reconstruct_secret(
         &self,
         shares: &[SecretShare],
@@ -355,8 +358,8 @@ impl KeyManager {
         chaos_seed: &[u8; 32],
     ) -> PrivacyProof {
         let mut hasher = Sha256::new();
-        hasher.update(&share.value);
-        hasher.update(&[share.index]);
+        hasher.update(share.value);
+        hasher.update([share.index]);
         hasher.update(chaos_seed);
         hasher.update(b"share-proof-v1");
         let commitment: [u8; 32] = hasher.finalize().into();

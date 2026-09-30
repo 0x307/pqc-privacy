@@ -1,7 +1,7 @@
 //! Chaos Randomness Oracle — deterministic ODE simulation, not an entropy source
 //!
 //! **What this module actually does.** [`ChaosOracle`] runs real 4th-order Runge-Kutta
-//! integration of the Chua and Rössler differential equations (see [`chua`]/[`rossler`]),
+//! integration of the Chua and Rössler differential equations (see [`chua`](crate::chaos::chua)/[`rossler`](crate::chaos::rossler)),
 //! with a Rössler failover when Chua stalls. But `ChaosOracle::new()` always starts from
 //! the same hard-coded initial conditions with no external seed, so its output —
 //! `chaos_entropy_bytes(n)`, `fiat_shamir_seed()`, everything downstream — is **the
@@ -80,11 +80,9 @@ impl ChaosOracle {
         use crate::chaos::chua::ChuaParams;
         use crate::chaos::rossler::RosslerParams;
 
-        let mut chua_params = ChuaParams::default();
-        chua_params.alpha = config.chua_alpha;
+        let chua_params = ChuaParams { alpha: config.chua_alpha, ..ChuaParams::default() };
 
-        let mut rossler_params = RosslerParams::default();
-        rossler_params.a = config.rossler_a;
+        let rossler_params = RosslerParams { a: config.rossler_a, ..RosslerParams::default() };
 
         use crate::chaos::chua::ChuaState;
         use crate::chaos::rossler::RosslerState;
@@ -168,16 +166,13 @@ impl ChaosOracle {
         let h_min = self.estimate_h_min(&bytes);
         let hash_5dqeh = self.hash_5dqeh(&bytes);
 
-        let source = if self.rossler.active {
-            EntropySource::VirtualChaos
-        } else {
-            EntropySource::VirtualChaos // physical QRNG injected externally
-        };
+        // Always virtual here: a physical QRNG is injected externally.
+        let source = EntropySource::VirtualChaos;
 
         // Proof: commitment to entropy quality
         let mut hasher = Sha256::new();
         hasher.update(&bytes);
-        hasher.update(&h_min.to_le_bytes());
+        hasher.update(h_min.to_le_bytes());
         let commitment = hex::encode(hasher.finalize());
 
         let proof = PrivacyProof {
@@ -231,7 +226,7 @@ impl ChaosOracle {
         while output.len() < output_len {
             let mut hasher = Sha256::new();
             hasher.update(input);
-            hasher.update(&counter.to_le_bytes());
+            hasher.update(counter.to_le_bytes());
             hasher.update(b"shake256-whiten");
             let block: [u8; 32] = hasher.finalize().into();
             let remaining = output_len - output.len();
@@ -244,6 +239,8 @@ impl ChaosOracle {
     /// Estimate min-entropy of a byte sequence.
     ///
     /// Uses frequency analysis: H_min = -log2(max_freq / n).
+    // Not `clamp`: `max(..).min(..)` maps NaN to the lower bound, `clamp` passes it through.
+    #[allow(clippy::manual_clamp)]
     fn estimate_h_min(&self, bytes: &[u8]) -> f64 {
         if bytes.is_empty() {
             return 0.0;

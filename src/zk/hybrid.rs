@@ -102,9 +102,10 @@ impl HybridZkLayer {
                 let _combined: [u8; 32] = hasher.finalize().into();
 
                 // Combined proof_bytes = snark triple + stark triple
-                let proof_bytes = alloc::format!("{}{}",
-                    alloc::format!("{}{}{}", snark_p.commitment, snark_p.challenge, snark_p.response),
-                    alloc::format!("{}{}", stark_p.commitment, stark_p.eval_value),
+                let proof_bytes = alloc::format!(
+                    "{}{}{}{}{}",
+                    snark_p.commitment, snark_p.challenge, snark_p.response,
+                    stark_p.commitment, stark_p.eval_value,
                 );
 
                 let proof_size = proof_bytes.len() / 2; // hex → bytes
@@ -178,7 +179,7 @@ impl HybridZkLayer {
                 let weight = stake_weights.get(i).copied().unwrap_or(1);
                 let mut hasher = Sha256::new();
                 hasher.update(p.proof_bytes.as_bytes());
-                hasher.update(&weight.to_le_bytes());
+                hasher.update(weight.to_le_bytes());
                 hasher.update(b"hybrid-fold-leaf-v1");
                 hasher.finalize().to_vec()
             }).collect();

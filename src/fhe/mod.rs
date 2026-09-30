@@ -182,14 +182,14 @@ impl FheEngine {
     /// Encrypt plaintext bytes using the FHE public key.
     ///
     /// Encodes bytes as polynomial coefficients, scales them by the
-    /// plaintext scaling factor `Δ` (see [`plaintext_delta`]), then encrypts
+    /// plaintext scaling factor `Δ` (see `plaintext_delta`), then encrypts
     /// using `ct = (c0, c1) = (b*r + e0 + Δ*m, a*r + e1)`.
     ///
     /// `Δ` separates the message from the encryption noise: without it, the
     /// noise terms introduced by the polynomial convolutions in `r`, `e0`,
     /// `e1` (accumulated over `n` coefficient pairs each) can exceed the
     /// magnitude of an unscaled plaintext byte (0-255), corrupting every
-    /// decrypted byte non-deterministically. See [`plaintext_delta`] for the
+    /// decrypted byte non-deterministically. See `plaintext_delta` for the
     /// safety-margin derivation.
     pub fn encrypt(
         &self,
@@ -239,7 +239,7 @@ impl FheEngine {
     ///
     /// Computes `m = c0 + c1*s = Δ*byte + noise` (mod `q`), then removes the
     /// scaling factor `Δ` via rounded integer division (see
-    /// [`plaintext_delta`]/[`round_div`]) before extracting the low 8 bits of
+    /// `plaintext_delta`/`round_div`) before extracting the low 8 bits of
     /// each coefficient. The rounded division cancels the accumulated
     /// encryption noise as long as `|noise| < Δ/2`, which `plaintext_delta`
     /// guarantees with a safety margin for the worst-case convolution noise
@@ -533,6 +533,7 @@ pub fn poly_add(a: &[i64], b: &[i64], modulus: i64) -> Vec<i64> {
 /// Negacyclic polynomial multiplication in `Z_q[X]/(X^N + 1)`.
 ///
 /// Schoolbook O(N²) — correct for N=1024.
+#[allow(clippy::needless_range_loop)] // indexes several arrays in step
 pub fn poly_mult_negacyclic(a: &[i64], b: &[i64], n: usize, modulus: i64) -> Vec<i64> {
     let mut result = vec![0i64; n];
     for i in 0..n {
@@ -616,7 +617,7 @@ pub fn deserialize_two_polys(bytes: &[u8], n: usize) -> Result<(Vec<i64>, Vec<i6
 const ERROR_BOUND: i64 = 16;
 
 /// Safety-margin multiplier applied on top of the worst-case noise bound
-/// when deriving the plaintext scaling factor `Δ` (see [`plaintext_delta`]).
+/// when deriving the plaintext scaling factor `Δ` (see `plaintext_delta`).
 ///
 /// A factor of 64 (2^6) gives ~6 bits of headroom between the worst-case
 /// noise magnitude and `Δ/2`, which is far more margin than the *actual*
@@ -669,7 +670,7 @@ fn modulus_from_bits(bits: u32) -> i64 {
 ///
 /// `encrypt()` multiplies the encoded plaintext by `Δ` before adding it into
 /// `c0`; `decrypt()` divides the raw decrypted coefficient by `Δ` (rounding
-/// to the nearest integer, see [`round_div`]) before extracting the byte.
+/// to the nearest integer, see `round_div`) before extracting the byte.
 /// Rounding exactly cancels the noise term as long as:
 ///
 /// ```text

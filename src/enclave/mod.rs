@@ -87,13 +87,13 @@ impl WavenEnclave {
         chaos_seed: &[u8; 32],
     ) -> Result<(), PrivacyError> {
         let tenant = self.keys.get(&tenant_key)
-            .ok_or_else(|| PrivacyError::PageAccessDenied { key: tenant_key, page: page_index })?
+            .ok_or(PrivacyError::PageAccessDenied { key: tenant_key, page: page_index })?
             .clone();
 
         // Initialize page with chaos-seeded data
         let mut hasher = Sha256::new();
-        hasher.update(&page_index.to_le_bytes());
-        hasher.update(&[tenant_key]);
+        hasher.update(page_index.to_le_bytes());
+        hasher.update([tenant_key]);
         hasher.update(chaos_seed);
         hasher.update(b"page-init-v1");
         let init_data: Vec<u8> = hasher.finalize().to_vec();
@@ -115,7 +115,7 @@ impl WavenEnclave {
         tenant_key: u8,
     ) -> Result<&[u8], PrivacyError> {
         let page = self.pages.get(&page_index)
-            .ok_or_else(|| PrivacyError::PageAccessDenied { key: tenant_key, page: page_index })?;
+            .ok_or(PrivacyError::PageAccessDenied { key: tenant_key, page: page_index })?;
 
         if page.key != tenant_key {
             return Err(PrivacyError::PageAccessDenied { key: tenant_key, page: page_index });
@@ -136,7 +136,7 @@ impl WavenEnclave {
         chaos_seed: &[u8; 32],
     ) -> Result<(), PrivacyError> {
         let page = self.pages.get_mut(&page_index)
-            .ok_or_else(|| PrivacyError::PageAccessDenied { key: tenant_key, page: page_index })?;
+            .ok_or(PrivacyError::PageAccessDenied { key: tenant_key, page: page_index })?;
 
         if page.key != tenant_key {
             return Err(PrivacyError::PageAccessDenied { key: tenant_key, page: page_index });
@@ -194,7 +194,7 @@ impl WavenEnclave {
     ) -> Result<(), PrivacyError> {
         // Verify from_key owns the page
         let page = self.pages.get(&page_index)
-            .ok_or_else(|| PrivacyError::PageAccessDenied { key: from_key, page: page_index })?;
+            .ok_or(PrivacyError::PageAccessDenied { key: from_key, page: page_index })?;
 
         if page.key != from_key {
             return Err(PrivacyError::PageAccessDenied { key: from_key, page: page_index });
