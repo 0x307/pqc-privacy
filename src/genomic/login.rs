@@ -111,7 +111,7 @@ impl QtaidLoginEngine {
         // Session ID
         let mut id_hasher = Sha256::new();
         id_hasher.update(did.as_bytes());
-        id_hasher.update(&now_ms.to_le_bytes());
+        id_hasher.update(now_ms.to_le_bytes());
         id_hasher.update(chaos_seed);
         let session_id = hex::encode(id_hasher.finalize())[..16].to_string();
 
@@ -173,14 +173,14 @@ impl QtaidLoginEngine {
         // statement_hash: public claim about the match ratio
         let mut stmt_hasher = Sha256::new();
         stmt_hasher.update(b"snp-match-v1");
-        stmt_hasher.update(&matched.to_le_bytes());
-        stmt_hasher.update(&total.to_le_bytes());
+        stmt_hasher.update(matched.to_le_bytes());
+        stmt_hasher.update(total.to_le_bytes());
         let statement_hash: [u8; 32] = stmt_hasher.finalize().into();
 
         // witness_hash: private knowledge of the actual match computation
         let mut wit_hasher = Sha256::new();
-        wit_hasher.update(&matched.to_le_bytes());
-        wit_hasher.update(&total.to_le_bytes());
+        wit_hasher.update(matched.to_le_bytes());
+        wit_hasher.update(total.to_le_bytes());
         wit_hasher.update(chaos_seed);
         wit_hasher.update(b"snp-witness-v1");
         let witness_hash: [u8; 32] = wit_hasher.finalize().into();

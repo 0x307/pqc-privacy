@@ -1,8 +1,8 @@
 //! Chaos module
 //!
-//! - [`chua`]   — Chua Attractor for Adaptive Privacy Perturbation
-//! - [`rossler`] — Rössler Attractor Backup for Chaos Routing
-//! - [`oracle`]  — Chaos Randomness Oracle for Privacy Amplification
+//! - [`chua`](crate::chaos::chua)   — Chua Attractor for Adaptive Privacy Perturbation
+//! - [`rossler`](crate::chaos::rossler) — Rössler Attractor Backup for Chaos Routing
+//! - [`oracle`](crate::chaos::oracle)  — Chaos Randomness Oracle for Privacy Amplification
 
 pub mod chua;
 pub mod oracle;

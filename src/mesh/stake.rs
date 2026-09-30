@@ -67,7 +67,7 @@ pub fn commit_stake(
 
     // Pedersen commitment: SHA-256(stake || voter_id || chaos || "commit-v1")
     let mut hasher = Sha256::new();
-    hasher.update(&stake_amount.to_le_bytes());
+    hasher.update(stake_amount.to_le_bytes());
     hasher.update(voter_id);
     hasher.update(chaos_seed);
     hasher.update(b"stake-commit-v1");
@@ -139,7 +139,7 @@ fn prove_threshold(amount: u64, threshold: u64, chaos_seed: &[u8; 32]) -> Privac
     // In production: Bulletproofs+ range proof
     let diff = amount.saturating_sub(threshold);
     let mut hasher = Sha256::new();
-    hasher.update(&diff.to_le_bytes());
+    hasher.update(diff.to_le_bytes());
     hasher.update(chaos_seed);
     hasher.update(b"range-proof-v1");
     let commitment: [u8; 32] = hasher.finalize().into();

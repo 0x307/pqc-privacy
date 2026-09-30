@@ -87,7 +87,7 @@ impl SanctuaryVault {
         let tuple_ids: Vec<String> = shards.iter().enumerate().map(|(i, shard)| {
             let mut hasher = Sha256::new();
             hasher.update(file_id.as_bytes());
-            hasher.update(&(i as u64).to_le_bytes());
+            hasher.update((i as u64).to_le_bytes());
             hasher.update(shard);
             hex::encode(hasher.finalize())[..16].to_string()
         }).collect();
@@ -202,7 +202,7 @@ impl SanctuaryVault {
             .map_err(|e| PrivacyError::Internal(alloc::format!("RS init failed: {:?}", e)))?;
 
         // Pad data to a multiple of k
-        let shard_size = (data.len() + k - 1) / k;
+        let shard_size = data.len().div_ceil(k);
         let padded_len = shard_size * k;
         let mut padded = data.to_vec();
         padded.resize(padded_len, 0u8);
@@ -252,10 +252,8 @@ impl SanctuaryVault {
 
         // Concatenate data shards only (first k)
         let mut result = Vec::new();
-        for i in 0..k {
-            if let Some(ref s) = shard_opts[i] {
-                result.extend_from_slice(s);
-            }
+        for s in shard_opts[..k].iter().flatten() {
+            result.extend_from_slice(s);
         }
         Ok(result)
     }

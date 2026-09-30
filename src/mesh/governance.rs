@@ -77,7 +77,7 @@ impl GovernanceEngine {
         // Store the ballot key commitment so we can decrypt during tally
         // commitment = SHA-256(ballot_key || "ballot-key-commit")
         let mut commit_hasher = Sha256::new();
-        commit_hasher.update(&ballot_key);
+        commit_hasher.update(ballot_key);
         commit_hasher.update(b"ballot-key-commit");
         let _key_commitment: [u8; 32] = commit_hasher.finalize().into();
 
@@ -137,8 +137,8 @@ impl GovernanceEngine {
 
         // Aggregate proof
         let mut proof_hasher = Sha256::new();
-        proof_hasher.update(&weighted_yes.to_le_bytes());
-        proof_hasher.update(&total_weight.to_le_bytes());
+        proof_hasher.update(weighted_yes.to_le_bytes());
+        proof_hasher.update(total_weight.to_le_bytes());
         proof_hasher.update(chaos_seed);
         proof_hasher.update(b"tally-proof-v1");
         let commitment: [u8; 32] = proof_hasher.finalize().into();
@@ -173,8 +173,8 @@ impl GovernanceEngine {
         chaos_seed: &[u8; 32],
     ) -> PrivacyProof {
         let mut hasher = Sha256::new();
-        hasher.update(&[vote as u8]);
-        hasher.update(&stake.to_le_bytes());
+        hasher.update([vote as u8]);
+        hasher.update(stake.to_le_bytes());
         hasher.update(chaos_seed);
         hasher.update(b"groth16-validity-v1");
         let commitment: [u8; 32] = hasher.finalize().into();

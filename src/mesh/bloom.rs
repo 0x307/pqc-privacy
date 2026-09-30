@@ -30,7 +30,7 @@ impl BloomFilter {
     pub fn new(capacity: usize, fp_rate: f64, dp_epsilon: f64) -> Self {
         let m = (-(capacity as f64) * fp_rate.ln() / (2.0_f64.ln().powi(2))).ceil() as usize;
         let k = ((m as f64 / capacity as f64) * 2.0_f64.ln()).ceil() as usize;
-        let byte_count = (m + 7) / 8;
+        let byte_count = m.div_ceil(8);
         Self {
             bits:   vec![0u8; byte_count],
             k:      k.max(1),
@@ -68,8 +68,8 @@ impl BloomFilter {
     pub fn prove_membership(&self, item: &[u8], result: bool) -> PrivacyProof {
         let mut hasher = Sha256::new();
         hasher.update(item);
-        hasher.update(&[result as u8]);
-        hasher.update(&self.count.to_le_bytes());
+        hasher.update([result as u8]);
+        hasher.update(self.count.to_le_bytes());
         hasher.update(b"bloom-membership-v1");
         let commitment: [u8; 32] = hasher.finalize().into();
 
@@ -106,7 +106,7 @@ impl BloomFilter {
     fn hash(&self, item: &[u8], seed: u64) -> usize {
         let mut hasher = Sha256::new();
         hasher.update(item);
-        hasher.update(&seed.to_le_bytes());
+        hasher.update(seed.to_le_bytes());
         hasher.update(b"5dqeh-bloom");
         let h: [u8; 32] = hasher.finalize().into();
         u64::from_le_bytes(h[..8].try_into().unwrap_or([0u8; 8])) as usize

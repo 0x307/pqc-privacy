@@ -9,7 +9,7 @@
 //!
 //! **Lossless byte compression.**
 //! [`FractalCompressor::compress_bytes`]/[`decompress_bytes`](FractalCompressor::decompress_bytes)
-//! are ordinary DEFLATE (RFC 1951) via `miniz_oxide`, returning a [`CompressedBlob`].
+//! are ordinary DEFLATE (RFC 1951) via `miniz_oxide`, returning a [`CompressedBlob`](crate::compression::CompressedBlob).
 //! They are not fractal and do not pretend to be: fractal compression is inherently lossy
 //! and only pays off on self-similar signals, which arbitrary bytes are not. What callers
 //! need here is an exact round-trip, so this path is lossless.
@@ -17,8 +17,8 @@
 //! Because no algorithm compresses every input — a counting argument, not a gap in this
 //! implementation — [`compress_bytes`](FractalCompressor::compress_bytes) falls back to
 //! storing the input verbatim when DEFLATE does not make it smaller, and records that in
-//! [`CompressedBlob::stored`]. The output is therefore never meaningfully larger than the
-//! input, and [`CompressedBlob::ratio`] reports what actually happened.
+//! [`CompressedBlob::stored`](crate::compression::CompressedBlob::stored). The output is therefore never meaningfully larger than the
+//! input, and [`CompressedBlob::ratio`](crate::compression::CompressedBlob::ratio) reports what actually happened.
 //!
 //! Earlier versions of this module claimed a "100:1" ratio on byte data and stored each
 //! chunk verbatim, which made the output strictly larger than the input. Both the claim and
@@ -52,6 +52,7 @@ impl AffineTransform {
     }
 
     /// Apply transform to a 5D coordinate.
+    #[allow(clippy::needless_range_loop)] // indexes several arrays in step
     pub fn apply(&self, x: &[f64; 5]) -> [f64; 5] {
         let mut result = [0.0f64; 5];
         for i in 0..5 {
@@ -130,6 +131,7 @@ impl FractalCompressor {
     ///
     /// Identifies self-similar patterns via barnsley-style collage theorem.
     /// Chaos perturbation modulates transformation coefficients.
+    #[allow(clippy::needless_range_loop)] // indexes several arrays in step
     pub fn compress(
         &self,
         coord: &FiveDimCoord,
@@ -299,7 +301,7 @@ impl FractalCompressor {
     fn chaos_delta(&self, chaos_seed: &[u8; 32], counter: u64) -> f64 {
         let mut hasher = Sha256::new();
         hasher.update(chaos_seed);
-        hasher.update(&counter.to_le_bytes());
+        hasher.update(counter.to_le_bytes());
         hasher.update(b"ifs-delta");
         let h: [u8; 32] = hasher.finalize().into();
         let raw = u64::from_le_bytes(h[..8].try_into().unwrap_or([0u8; 8]));
@@ -346,8 +348,8 @@ pub fn reduce_5d_to_3d(coords: &[FiveDimCoord]) -> Vec<[f64; 3]> {
             means[d] += pt[d];
         }
     }
-    for d in 0..5 {
-        means[d] /= n;
+    for m in means.iter_mut() {
+        *m /= n;
     }
 
     // Compute variance for each dimension
@@ -358,8 +360,8 @@ pub fn reduce_5d_to_3d(coords: &[FiveDimCoord]) -> Vec<[f64; 3]> {
             variances[d] += diff * diff;
         }
     }
-    for d in 0..5 {
-        variances[d] /= n;
+    for v in variances.iter_mut() {
+        *v /= n;
     }
 
     // Select the 3 dimensions with highest variance

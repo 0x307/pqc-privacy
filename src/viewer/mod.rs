@@ -71,7 +71,7 @@ impl QscifViewer {
         // ZK range proof: prove user_tier >= required_tier
         let diff = user_tier - required_tier;
         let mut hasher = Sha256::new();
-        hasher.update(&[diff]);
+        hasher.update([diff]);
         hasher.update(chaos_seed);
         hasher.update(b"clearance-proof-v1");
         let commitment: [u8; 32] = hasher.finalize().into();
@@ -112,7 +112,7 @@ impl QscifViewer {
         // Derive nonce: first 12 bytes of SHA-256(field_name || clearance_level || "nonce")
         let mut nonce_hasher = Sha256::new();
         nonce_hasher.update(field_name.as_bytes());
-        nonce_hasher.update(&[clearance_level]);
+        nonce_hasher.update([clearance_level]);
         nonce_hasher.update(b"redact-nonce-v1");
         let nonce_hash: [u8; 32] = nonce_hasher.finalize().into();
         let nonce_bytes: [u8; NONCE_LEN] = nonce_hash[..NONCE_LEN].try_into()

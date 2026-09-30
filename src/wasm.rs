@@ -153,6 +153,7 @@ pub fn hypergraph_new(chaos_seed: f64) -> String {
 /// `graph_json`: JSON string from `hypergraph_new` or previous operations.
 /// Returns updated JSON graph string on success.
 #[wasm_bindgen]
+#[allow(clippy::too_many_arguments)] // the JS API takes the vertex fields as arguments
 pub fn hypergraph_encode_vertex(
     graph_json: &str,
     id: &str,

@@ -87,7 +87,7 @@ impl EncryptedMpt {
         let mut hasher = Sha256::new();
         hasher.update(enc_key.as_bytes());
         hasher.update(enc_val.as_bytes());
-        hasher.update(&self.count.to_le_bytes());
+        hasher.update(self.count.to_le_bytes());
         let hash = hex::encode(hasher.finalize());
 
         let node = MptNode {
@@ -180,7 +180,7 @@ impl EncryptedMpt {
     fn derive_node_path(&self, key: &[u8], count: u64) -> Vec<u8> {
         let mut hasher = Sha256::new();
         hasher.update(key);
-        hasher.update(&count.to_le_bytes());
+        hasher.update(count.to_le_bytes());
         hasher.update(b"mpt-path-v1");
         hasher.finalize().to_vec()
     }
@@ -309,7 +309,7 @@ impl EncryptedMpt {
 
     fn update_root(&mut self) {
         let mut hasher = Sha256::new();
-        for (hash, _) in &self.nodes {
+        for hash in self.nodes.keys() {
             hasher.update(hash.as_bytes());
         }
         self.root = Some(hex::encode(hasher.finalize()));
