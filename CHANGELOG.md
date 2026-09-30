@@ -7,6 +7,18 @@ adheres to the breaking-change and deprecation rules in
 [`STABILITY.md`](./STABILITY.md) rather than strict SemVer prior to `1.0.0` — see that
 document for what counts as breaking inside `0.x`.
 
+## [Unreleased]
+
+### Fixed
+
+- **pqc-privacy 0.1.3 could not be installed.** It required `pqc-kem = "0.2"`, and every
+  0.2.x release is yanked, so Cargo refused to resolve it for any new project. It now
+  requires `pqc-kem = "0.3"`. No pqc-kem type appears in this crate's public API, and all
+  tests pass unchanged, so this is a patch-level change.
+- The lockfile moves off yanked `pqc-sig` 0.4.1 to 0.4.2.
+- `deny.toml` records why RUSTSEC-2024-0384 (`instant`, unmaintained) is ignored: it arrives
+  only through `reed-solomon-erasure` 6.0.0 and has no safe upgrade.
+
 ## [0.1.3] - 2026-09-23
 
 Documentation and metadata only. No change to the API, the wire formats or behaviour.
