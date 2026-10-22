@@ -450,5 +450,5 @@ audit and stability standard.
 crate, pinned to the published versions.
 
 **Audit status:** None of these crates has been independently audited, and none holds a CMVP / FIPS 140-3 validation. "FIPS 203/204/205/206" means the algorithms follow those standards, not that the code is certified. Known issues for this crate are in
-[SECURITY.md](https://github.com/0x307/pqc-privacy/blob/main/SECURITY.md). Versioning and yanks:
+[SECURITY.md](https://github.com/0x307/pqc-privacy/blob/main/SECURITY.md). Versioning and support windows:
 [STABILITY.md](https://github.com/0x307/pqc-privacy/blob/main/STABILITY.md).
