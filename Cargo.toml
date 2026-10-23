@@ -1,6 +1,6 @@
 [package]
 name        = "pqc-privacy"
-version     = "0.1.4"
+version     = "0.1.5"
 edition     = "2021"
 rust-version = "1.85"
 authors     = ["Kenneth Harper"]
@@ -27,8 +27,9 @@ crate-type = ["cdylib", "rlib"]
 # Post-quantum KEM — ML-KEM-768/1024, FIPS 203
 pqc-kem = { version = "0.3", default-features = false }
 
-# Post-quantum signatures — ML-DSA-65, SLH-DSA, FIPS 204/205
-pqc-sig = { version = "0.4", default-features = false }
+# Post-quantum signatures — ML-DSA-65, FIPS 204. pqc-sig 0.5 gates each algorithm behind
+# a feature; this crate uses ML-DSA-65 only, so it enables `ml-dsa` and nothing else.
+pqc-sig = { version = "0.5", default-features = false, features = ["ml-dsa"] }
 
 # KDF — HKDF-SHA256 for QFKH ratchet derivation
 hkdf = { version = "0.12", default-features = false }
